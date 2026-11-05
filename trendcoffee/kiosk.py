@@ -401,6 +401,7 @@ class InteractionHost:
         # until then, or if that connection drops, PCM events use the kiosk socket.
         self.speaker_factory = speaker_factory
         self.speaker = None
+        self.discard_logged = False  # one log per reply when its audio is not played
         self.playback_lock = asyncio.Lock()
         self.playback_tasks = set()
         self._speaker_stop = None
@@ -648,7 +649,21 @@ class InteractionHost:
         if self._speaker_ready():
             pcm = speech_pcm(audio)
             if pcm:
+                ignored = self.speaker.metrics.get("ignored_suspended_ms", 0)
                 self.speaker.push(pcm)
+                if (
+                    self.speaker.metrics.get("ignored_suspended_ms", 0) > ignored
+                    and not self.discard_logged
+                ):
+                    # Evidence for replies lost without a logged cut (2026-11-05, "Dạ, kem
+                    # tươi..."): the speaker was still stopped from an earlier guest turn.
+                    self.discard_logged = True
+                    logging.getLogger(__name__).warning(
+                        "Trend's reply audio arrived at %s while the speaker was stopped; "
+                        "it is not played",
+                        time.strftime("%H:%M:%S"),
+                    )
+                    self._recent_fusion(discarded=True)
             self.audio_metrics["speaker_transport"] = self.speaker.metrics
         else:
             await self.emit("audio", audio=audio)
@@ -972,6 +987,7 @@ class InteractionHost:
                         self._reply_cut(dropped)
                 else:
                     reply_stopped[0] = False
+                    self.discard_logged = False
                     if self.speaker is not None:
                         self.speaker.resume()
                     self._recent_fusion(turn="assistant")

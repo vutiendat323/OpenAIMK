@@ -550,3 +550,29 @@ def test_a_cut_while_the_browser_plays_trend_is_counted_without_a_duration(svc, 
         await host.close()
 
     asyncio.run(run())
+
+
+def test_reply_audio_the_stopped_speaker_drops_is_logged_once(svc, caplog):
+    """A reply lost with no logged cut (2026-11-05): audio after a guest turn, before the
+    next assistant turn, is never played; the kiosk now says so."""
+    from trendcoffee.speaker import SpeakerTrack
+
+    async def run():
+        host, _, _, _, on_event = await voice_host(svc)
+        speaker = SpeakerTrack(lambda playing: None)
+        speaker.connected = True
+        host.speaker = speaker
+        await on_event("thread/realtime/userTurn/started", {"turnId": "u1"})
+        with caplog.at_level("WARNING", logger="trendcoffee.kiosk"):
+            for _ in range(3):
+                await on_event("thread/realtime/outputAudio/delta", native_audio(b"\x10\x00" * 960))
+        assert speaker.metrics["ignored_suspended_ms"] > 0
+        assert caplog.text.count("while the speaker was stopped") == 1
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a2"})
+        ignored = speaker.metrics["ignored_suspended_ms"]
+        await on_event("thread/realtime/outputAudio/delta", native_audio(b"\x10\x00" * 960))
+        assert speaker.metrics["ignored_suspended_ms"] == ignored, "a new reply plays"
+        host.speaker = None
+        await host.close()
+
+    asyncio.run(run())
