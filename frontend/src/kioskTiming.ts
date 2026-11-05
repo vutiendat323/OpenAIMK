@@ -17,7 +17,7 @@ export type KioskTimingInfo = {
 
 export const timingGroups: {
   title: string
-  fields: { name: TimingField; label: string; unit: 'm' | 's'; step: number }[]
+  fields: { name: TimingField; label: string; unit: 'm' | 's'; step: number; hint?: string }[]
 }[] = [
   {
     title: 'Bắt đầu phiên',
@@ -30,9 +30,20 @@ export const timingGroups: {
     title: 'Kết thúc phiên',
     fields: [
       { name: 'leave_seconds', label: 'Rời đi bao lâu thì kết thúc', unit: 's', step: 1 },
-      { name: 'idle_seconds', label: 'Không tương tác', unit: 's', step: 5 },
       { name: 'session_limit_seconds', label: 'Thời lượng tối đa', unit: 's', step: 30 },
       { name: 'warning_seconds', label: 'Cảnh báo trước khi hết giờ', unit: 's', step: 5 },
+    ],
+  },
+  {
+    title: 'Nhắc khách',
+    fields: [
+      {
+        name: 'idle_seconds',
+        label: 'Hỏi khách sau khi im lặng',
+        unit: 's',
+        step: 5,
+        hint: 'Khách không nói, không chạm, không đổi giỏ trong khoảng này thì Trend hỏi một câu hợp với lúc đó (chọn món, thanh toán, thêm món). Phiên không kết thúc.',
+      },
     ],
   },
 ]

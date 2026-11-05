@@ -124,10 +124,11 @@ def test_session_limits_come_from_the_values_the_guest_started_with(svc, tmp_pat
     host.session_timing = dict(timing.values)  # what _initialize_guest takes for a guest
     host.started = host.activity_at = clock[0]
     timing.update({"idle_seconds": 600})  # a change during the session waits for the next one
-    # A quarter of the idle time before the end, Trend warns (spoken; see test_spoken_warnings).
-    assert host.session_limit(clock[0] + 33) is None
-    assert host.session_limit(clock[0] + 34) == "idle_warning"
-    assert host.session_limit(clock[0] + 45) == "idle"
+    # After the quiet time Trend asks the guest (see test_spoken_warnings); it never ends it.
+    assert host.session_limit(clock[0] + 44) is None
+    assert host.session_limit(clock[0] + 45) == "idle_nudge"
+    host.idle_nudge = host.guest_activity_at  # asked once; the guest stays quiet
+    assert host.session_limit(clock[0] + 200) is None
     host.activity_at = clock[0] + 260
     assert host.session_limit(clock[0] + 270) == "warning"
     host.warned = True

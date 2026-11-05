@@ -5,7 +5,10 @@ const english: Record<string, string> = {
   'Khoảng cách kích hoạt': 'Trigger distance',
   'Đứng trước camera': 'Time in front of the camera',
   'Rời đi bao lâu thì kết thúc': 'End after the guest leaves for',
-  'Không tương tác': 'No interaction',
+  'Nhắc khách': 'Prompting the guest',
+  'Hỏi khách sau khi im lặng': 'Ask the guest after a quiet spell',
+  'Khách không nói, không chạm, không đổi giỏ trong khoảng này thì Trend hỏi một câu hợp với lúc đó (chọn món, thanh toán, thêm món). Phiên không kết thúc.':
+    'If the guest does not speak, touch the screen or change the cart for this long, Trend asks one question that fits the moment (choosing, paying, adding more). The session does not end.',
   'Thời lượng tối đa': 'Maximum session length',
   'Cảnh báo trước khi hết giờ': 'Warning before the limit',
   'mặc định': 'default',

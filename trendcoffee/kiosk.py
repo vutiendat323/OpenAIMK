@@ -35,8 +35,8 @@ from .kiosk_timing import KioskTiming
 from .service import ServiceError
 from .session_notices import (
     fallback_text,
-    idle_warning_lead,
-    idle_warning_turn,
+    guest_situation,
+    idle_nudge_turn,
     time_warning_turn,
 )
 from .speaker import SpeakerPeer
@@ -391,10 +391,10 @@ class InteractionHost:
         self.vision_task = self.tick_task = self.start_task = None
         self.manual = False
         self.started = self.activity_at = 0
-        # The guest's own activity (speech, touch, cart); Trend's speech is not counted, so a
-        # spoken idle warning cannot keep the session open by itself.
+        # The guest's own activity (speech, touch, cart); Trend's speech is not counted, so
+        # Trend's own question does not reset the guest's quiet stretch.
         self.guest_activity_at = 0
-        self.idle_warning = None  # {"deadline", "guest_at"} after Trend warned of idleness
+        self.idle_nudge = None  # guest_activity_at when Trend last asked a quiet guest
         self.warned = False
         self.calls = OrderedDict()
         self.submitted = {}
@@ -692,7 +692,7 @@ class InteractionHost:
         self.paid_reported.clear()
         self.started = self.activity_at = self.guest_activity_at = self.clock()
         self.warned = False
-        self.idle_warning = None
+        self.idle_nudge = None
         await self.emit(
             "session",
             session_token=self.token,
@@ -1714,50 +1714,62 @@ class InteractionHost:
             await self._session_step(now)
 
     async def _session_step(self, now):
-        """One tick of a guest session: end it, or have Trend warn before it ends."""
+        """One tick of a guest session: end it at the time limit, or have Trend speak up."""
         limit = self.session_limit(now)
-        if limit in ("time_limit", "idle"):
+        if limit == "time_limit":
             await self.end(limit)
         elif limit == "warning":
             self.warned = True
-            self._warn("time", self.session_timing["warning_seconds"])
-        elif limit == "idle_warning":
-            lead = idle_warning_lead(self.session_timing["idle_seconds"])
-            self.idle_warning = {"deadline": now + lead, "guest_at": self.guest_activity_at}
-            self._warn("idle", lead)
+            seconds = self.session_timing["warning_seconds"]
+            self._speak("time", time_warning_turn(seconds), fallback_text("time", seconds))
+        elif limit == "idle_nudge":
+            # A quiet guest is asked, never sent away (user decision 2026-11-05); the session
+            # still ends when the guest leaves the camera or at the time limit.
+            self.idle_nudge = self.guest_activity_at
+            state, facts = self.guest_situation()
+            self.audio_metrics["idle_nudges"] = self.audio_metrics.get("idle_nudges", 0) + 1
+            self._speak(
+                "nudge",
+                idle_nudge_turn(state, facts, self.session_timing["idle_seconds"]),
+                fallback_text("nudge"),
+            )
 
     def session_limit(self, now):
-        """'time_limit', 'idle', 'warning' / 'idle_warning' (once each) or None.
+        """'time_limit', 'warning' (once), 'idle_nudge' (once per quiet stretch) or None.
 
-        Uses this guest's own limits. After an idle warning the session ends at the promised
-        time unless the guest acts; Trend speaking the warning does not count as activity.
+        Uses this guest's own limits. Trend speaking does not count as the guest's activity, so
+        a guest who stays quiet after Trend's question is not asked again until they act.
         """
         limits = self.session_timing
         elapsed = now - self.started
         if elapsed >= limits["session_limit_seconds"]:
             return "time_limit"
-        if self.idle_warning and self.guest_activity_at > self.idle_warning["guest_at"]:
-            self.idle_warning = None  # the guest came back
-        if self.idle_warning and now >= self.idle_warning["deadline"]:
-            return "idle"
-        if now - self.activity_at >= limits["idle_seconds"]:
-            return "idle"
+        if self.idle_nudge is not None and self.guest_activity_at > self.idle_nudge:
+            self.idle_nudge = None  # the guest acted: a new quiet stretch may be asked about
         if (
             limits["warning_seconds"] > 0
             and elapsed >= limits["session_limit_seconds"] - limits["warning_seconds"]
             and not self.warned
         ):
             return "warning"
-        if not self.idle_warning and now - self.activity_at >= limits["idle_seconds"] - (
-            idle_warning_lead(limits["idle_seconds"])
-        ):
-            return "idle_warning"
+        if self.idle_nudge is None and now - self.activity_at >= limits["idle_seconds"]:
+            return "idle_nudge"
         return None
 
-    def _warn(self, kind, seconds):
-        """Trend says the warning; the screen shows it only if Trend cannot."""
+    def guest_situation(self):
+        """Where this guest is: nothing chosen, cart, order awaiting payment, or paid."""
+        order = next(reversed(self.submitted.values()), None) if self.submitted else None
+        return guest_situation(
+            self.cart,
+            self.fulfillment,
+            self.table_label,
+            order,
+            paid=bool(order and order.get("id") in self.paid_seen),
+        )
+
+    def _speak(self, kind, text, fallback):
+        """Trend says it; the screen shows the fallback only if Trend cannot."""
         generation, thread = self.generation, self.thread_id
-        text = idle_warning_turn(seconds) if kind == "idle" else time_warning_turn(seconds)
         self.audio_metrics["spoken_warnings"] = self.audio_metrics.get("spoken_warnings", 0) + 1
 
         async def speak():
@@ -1766,9 +1778,9 @@ class InteractionHost:
                     await self.codex.start_turn(thread, text)
                     return
                 except Exception:
-                    logging.getLogger(__name__).exception("Kiosk %s warning turn failed", kind)
+                    logging.getLogger(__name__).exception("Kiosk %s turn failed", kind)
             if self.active and generation == self.generation:
-                await self.emit("warning", message=fallback_text(kind, seconds))
+                await self.emit("warning", message=fallback)
 
         # Not awaited: a Codex request must not hold up the session clock.
         task = asyncio.create_task(speak())

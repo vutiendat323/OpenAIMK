@@ -1,8 +1,10 @@
 """Staff-tuned kiosk session boundaries, kept on the server and applied from the next guest.
 
 Session start: how close a guest must stand and for how long before a session opens.
-Session end: how long the guest may be away, idle, or in one session, and the warning
-before that limit. Values are bounded so a typo cannot lock the kiosk open or shut.
+Session end: how long the guest may be away or in one session, and the warning before
+that limit. `idle_seconds` no longer ends a session (2026-11-05): after that much quiet,
+Trend asks the guest a question that fits where they are. Values are bounded so a typo
+cannot lock the kiosk open or shut.
 """
 
 import json
