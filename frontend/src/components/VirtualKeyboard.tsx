@@ -18,7 +18,7 @@ export function VirtualKeyboard() {
 
       if (
         (target instanceof HTMLInputElement &&
-          ['text', 'search', 'tel', ''].includes(target.type) &&
+          ['text', 'search', 'tel', 'password', ''].includes(target.type) &&
           !target.disabled &&
           !target.readOnly) ||
         (target instanceof HTMLTextAreaElement && !target.disabled && !target.readOnly)
@@ -42,7 +42,7 @@ export function VirtualKeyboard() {
           (!wrapperRef.current?.contains(currentActive) &&
             !(
               (currentActive instanceof HTMLInputElement &&
-                ['text', 'search', 'tel', ''].includes(currentActive.type)) ||
+                ['text', 'search', 'tel', 'password', ''].includes(currentActive.type)) ||
               currentActive instanceof HTMLTextAreaElement
             ))
         ) {
@@ -64,7 +64,7 @@ export function VirtualKeyboard() {
       ) {
         if (!(
           (target instanceof HTMLInputElement &&
-            ['text', 'search', 'tel', ''].includes(target.type)) ||
+            ['text', 'search', 'tel', 'password', ''].includes(target.type)) ||
           target instanceof HTMLTextAreaElement
         )) {
           setIsOpen(false)

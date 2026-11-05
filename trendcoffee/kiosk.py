@@ -31,6 +31,7 @@ from .claim_guard import (
     spoken_items,
 )
 from .codex_voice import CodexVoice
+from .kiosk_timing import KioskTiming
 from .service import ServiceError
 from .speaker import SpeakerPeer
 
@@ -322,8 +323,12 @@ class InteractionHost:
         wall=time.time,
         speaker_factory=SpeakerPeer,
         camera_factory=CameraPeer,
+        timing=None,
     ):
         self.service = service
+        # Staff-tuned session boundaries; a guest keeps the values their session began with.
+        self.timing = timing or KioskTiming()
+        self.session_timing = dict(self.timing.values)
         # In device-camera mode the browser sends its camera over WebRTC; JPEG packets
         # on the kiosk socket remain the fallback until that video arrives.
         self.camera_factory = camera_factory
@@ -354,7 +359,7 @@ class InteractionHost:
         self.closing = False
         self.last_audio_at = 0
         self.clock, self.wall = clock, wall
-        self.policy = PresencePolicy()
+        self.policy = PresencePolicy(**self._presence_limits())
         self.generation = 0
         self.thread_id = None
         self.session_wall = 0.0  # wall time the current guest session began
@@ -628,6 +633,7 @@ class InteractionHost:
         generation = self.generation
         self.active, self.manual = True, manual
         self.session_wall = self.wall()
+        self.session_timing = dict(self.timing.values)
         self.screen = None
         self.session_voice = self.voice
         if self.speaker is not None:
@@ -1667,12 +1673,52 @@ class InteractionHost:
                 await self.end("sensor_or_customer_left")
             if not self.active:
                 continue
-            elapsed = now - self.started
-            if elapsed >= 600 or now - self.activity_at >= 120:
-                await self.end("time_limit" if elapsed >= 600 else "idle")
-            elif elapsed >= 540 and not self.warned:
+            limit = self.session_limit(now)
+            if limit in ("time_limit", "idle"):
+                await self.end(limit)
+            elif limit == "warning":
                 self.warned = True
-                await self.emit("warning", message="Phiên trò chuyện còn một phút.")
+                remaining = round(self.session_timing["warning_seconds"])
+                await self.emit(
+                    "warning",
+                    message=(
+                        "Phiên trò chuyện còn một phút."
+                        if remaining == 60
+                        else f"Phiên trò chuyện còn {remaining} giây."
+                    ),
+                )
+
+    def session_limit(self, now):
+        """'time_limit', 'idle', 'warning' (once) or None, from this guest's own limits."""
+        limits = self.session_timing
+        elapsed = now - self.started
+        if elapsed >= limits["session_limit_seconds"]:
+            return "time_limit"
+        if now - self.activity_at >= limits["idle_seconds"]:
+            return "idle"
+        if (
+            limits["warning_seconds"] > 0
+            and elapsed >= limits["session_limit_seconds"] - limits["warning_seconds"]
+            and not self.warned
+        ):
+            return "warning"
+        return None
+
+    def _presence_limits(self):
+        values = self.timing.values
+        return {
+            "threshold": values["presence_distance_m"],
+            "enter_seconds": values["enter_seconds"],
+            "leave_seconds": values["leave_seconds"],
+        }
+
+    def apply_timing(self):
+        """New presence limits take effect between guests; a current guest keeps theirs."""
+        if self.active:
+            return False
+        for name, value in self._presence_limits().items():
+            setattr(self.policy, name, value)
+        return True
 
     async def end(self, reason):
         async with self.lock:
@@ -1685,6 +1731,7 @@ class InteractionHost:
                 self.recovery_task.cancel()
             self.generation += 1
             self.policy.reset(block=reason in ("next_guest", "idle", "time_limit"))
+            self.apply_timing()
             thread, self.thread_id = self.thread_id, None
             self.cart, self.quote = [], None
             self.token = ""
@@ -1757,7 +1804,7 @@ class InteractionHost:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         self.start_task = self.recovery_task = self.vision_task = self.tick_task = None
-        self.policy = PresencePolicy()
+        self.policy = PresencePolicy(**self._presence_limits())
 
     def _order_paid(self, session, order):
         """Service listener, called from any thread when an order first becomes paid."""

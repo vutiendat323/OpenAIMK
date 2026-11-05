@@ -1,4 +1,30 @@
 const english: Record<string, string> = {
+  Kiosk: 'Kiosk',
+  'Bắt đầu phiên': 'Session start',
+  'Kết thúc phiên': 'Session end',
+  'Khoảng cách kích hoạt': 'Trigger distance',
+  'Đứng trước camera': 'Time in front of the camera',
+  'Rời đi bao lâu thì kết thúc': 'End after the guest leaves for',
+  'Không tương tác': 'No interaction',
+  'Thời lượng tối đa': 'Maximum session length',
+  'Cảnh báo trước khi hết giờ': 'Warning before the limit',
+  'mặc định': 'default',
+  'Phải nhỏ hơn thời lượng tối đa.': 'Must be less than the maximum session length.',
+  'Ngoài giới hạn cho phép.': 'Outside the allowed range.',
+  'Mã nhân viên': 'Staff code',
+  'Thay đổi áp dụng từ khách tiếp theo; khách đang trò chuyện giữ thiết lập cũ.':
+    'Changes apply from the next guest; a guest in a session keeps the old settings.',
+  'Đã lưu. Áp dụng ngay cho khách tiếp theo.': 'Saved. Applies to the next guest.',
+  'Đã lưu. Khách hiện tại giữ thiết lập cũ; áp dụng từ khách tiếp theo.':
+    'Saved. The current guest keeps the old settings; applies from the next guest.',
+  'Khôi phục mặc định': 'Restore defaults',
+  'Đang lưu…': 'Saving…',
+  Lưu: 'Save',
+  'Đang tải…': 'Loading…',
+  'Mã nhân viên không đúng.': 'The staff code is incorrect.',
+  'Server chưa bật mã nhân viên (TREND_STAFF_TOKEN).':
+    'The server has no staff code set (TREND_STAFF_TOKEN).',
+  'Có giá trị nằm ngoài giới hạn cho phép.': 'A value is outside the allowed range.',
   'Chưa kết nối danh sách bàn. Bạn có thể chọn mang đi.':
     'Table list is not connected. You can choose take out.',
   'Chưa có dữ liệu bàn để chọn. Bạn thử lại hoặc chọn mang đi nhé.':
