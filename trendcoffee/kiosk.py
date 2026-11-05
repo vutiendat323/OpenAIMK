@@ -282,6 +282,9 @@ SCREEN_TOOLS = {
 # Voice tools whose result can report a paid order to Codex.
 PAYMENT_TOOLS = ("kiosk_payment", "kiosk_checkout")
 PAID_NOTICE_WAIT = 20.0  # seconds a paid notice waits for such a tool call to finish
+# A spoken session warning waits this long at most for Trend to finish the current reply.
+WARNING_WAIT = 12.0
+WARNING_POLL = 0.1
 
 
 def screen_order(menu, ids):
@@ -1816,6 +1819,14 @@ class InteractionHost:
         self.audio_metrics["spoken_warnings"] = self.audio_metrics.get("spoken_warnings", 0) + 1
 
         async def speak():
+            # Never cut Trend mid-sentence (2026-11-05: "Dạ, hiểu rồi, mình sẽ..." was lost to
+            # a time warning): wait, bounded, until the current reply has finished playing.
+            waited = 0.0
+            while self.playing and waited < WARNING_WAIT:
+                await asyncio.sleep(WARNING_POLL)
+                waited += WARNING_POLL
+            if not self.active or generation != self.generation:
+                return
             if thread and hasattr(self.codex, "start_turn"):
                 try:
                     await self.codex.start_turn(thread, text)
