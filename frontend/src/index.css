@@ -5504,6 +5504,27 @@ p {
   animation: vkSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.kiosk-keyboard-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  margin: -4px 0 4px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.kiosk-keyboard-handle:active {
+  cursor: grabbing;
+}
+.kiosk-keyboard-handle::before {
+  content: '';
+  width: 56px;
+  height: 5px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
 @keyframes vkSlideUp {
   from {
     transform: translate(-50%, 100%);
