@@ -246,7 +246,7 @@ export function useKioskVoice(onEvent: (event: KioskEvent) => void, token = '') 
     try {
       const videoStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 20 } },
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } },
       })
       if (
         runtime.sessionEpoch !== attempt ||
@@ -424,7 +424,7 @@ export function useKioskVoice(onEvent: (event: KioskEvent) => void, token = '') 
                 facingMode: { ideal: 'user' },
                 width: { ideal: 640 },
                 height: { ideal: 480 },
-                frameRate: { ideal: 15, max: 20 },
+                frameRate: { ideal: 30, max: 30 },
               }
             : false,
       })

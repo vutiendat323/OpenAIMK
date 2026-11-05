@@ -74,3 +74,76 @@ def test_worker_acknowledges_only_completed_session_initialization(monkeypatch):
         assert messages[-1] == {"type": "error", "generation": 8, "request_id": 4}
 
     asyncio.run(run())
+
+
+def test_a_session_publishes_its_fusion_state_to_the_visual_console(monkeypatch):
+    """2026-11-05: the Visual console never showed "TARGET LOCKED" or the audio monitor.
+
+    `SpeakerStream` creates its operator console (which streams `voice_monitor_start` and
+    `voice_telemetry` to Visual) only when it gets `speaker_settings`; the worker passed none.
+    Levels and verdicts only: no PCM leaves through the console.
+    """
+    from types import ModuleType
+
+    stdout = sys.stdout
+    try:
+        worker_module = importlib.import_module("trendcoffee.av_worker")
+    finally:
+        sys.stdout = stdout
+    created = {}
+
+    class Stream:
+        def __init__(self, **kwargs):
+            created.update(kwargs)
+
+        async def start(self):
+            pass
+
+        async def close(self):
+            pass
+
+    class Faces:
+        def fresh(self, now, max_age):
+            return True
+
+    class Bridge:
+        ready = True
+
+        def __init__(self, url, session_id, faces):
+            pass
+
+        def offer_telemetry(self, snapshot):
+            pass
+
+    fakes = {
+        "audio": ModuleType("audio"),
+        "audio.application": ModuleType("audio.application"),
+        "audio.application.stream": SimpleNamespace(SpeakerStream=Stream),
+        "audio.domain": ModuleType("audio.domain"),
+        "audio.domain.evidence": SimpleNamespace(FaceTrackBuffer=Faces),
+        "audio.domain.fusion": SimpleNamespace(
+            FusionGate=lambda settings, faces, fsm_state: SimpleNamespace(settings=settings)
+        ),
+        "audio.domain.settings": SimpleNamespace(
+            settings_from_mapping=lambda values: SimpleNamespace(**values)
+        ),
+        "audio.infrastructure": ModuleType("audio.infrastructure"),
+        "audio.infrastructure.vision": ModuleType("audio.infrastructure.vision"),
+        "audio.infrastructure.vision.asd_bridge": SimpleNamespace(VisionAudioBridge=Bridge),
+    }
+    for name, module in fakes.items():
+        monkeypatch.setitem(sys.modules, name, module)
+
+    async def run():
+        worker = worker_module.Worker()
+        worker.diarizer = worker.embedder = worker.separator = None  # models from load()
+        worker.media_ready = lambda: True
+        worker.listen_faces = lambda url, generation: asyncio.sleep(0)
+        await worker.begin({"generation": 1, "session_id": "s1"})
+        settings = created.get("speaker_settings")
+        assert settings is not None, "without settings the stream has no console"
+        assert settings.vision_asd and settings.identity == "fusion"
+        assert created["gate"].settings is settings, "the console shows the gate's own settings"
+        await worker.end()
+
+    asyncio.run(run())
