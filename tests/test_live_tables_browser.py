@@ -62,8 +62,12 @@ def test_touch_auto_selects_first_free_and_refreshes_after_switching_mode(page, 
     expect(page.locator(".topbar .table-control")).to_have_count(0)
     expect(page.get_by_role("listbox")).to_be_visible()
     expect(table_select).to_have_attribute("aria-description", "Bàn 7")
-    expect(page.get_by_role("option", name="Bàn 3 - Đã đặt")).to_have_attribute("aria-disabled", "true")
-    expect(page.get_by_role("option", name="Bàn 9 - Không xác định")).to_have_attribute("aria-disabled", "true")
+    expect(page.get_by_role("option", name="Bàn 3 - Đã đặt")).to_have_attribute(
+        "aria-disabled", "true"
+    )
+    expect(page.get_by_role("option", name="Bàn 9 - Không xác định")).to_have_attribute(
+        "aria-disabled", "true"
+    )
     page.get_by_role("option", name="Bàn 5 - Bàn trống").click()
     expect(table_select).to_have_attribute("aria-description", "Bàn 5")
     expect(page.get_by_role("listbox")).to_have_count(0)
