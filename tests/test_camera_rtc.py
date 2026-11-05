@@ -87,27 +87,8 @@ class ScriptedTrack:
         return av.VideoFrame(64, 48, "yuv420p")
 
 
-def test_camera_peer_forwards_at_most_thirty_frames_per_second():
-    async def run():
-        clock = [0.0]
-        jpegs = []
-
-        async def on_jpeg(jpeg):
-            jpegs.append(jpeg)
-
-        camera = CameraPeer(on_jpeg, clock=lambda: clock[0])
-        await camera.read(ScriptedTrack(clock, count=120, fps=60))  # 2 s of a 60 fps camera
-        await camera.close()
-        assert camera.metrics["frames"] == 120
-        assert 59 <= len(jpegs) <= 61, "30 fps, like the kiosk's C920"
-        assert camera.metrics["forwarded"] == len(jpegs)
-        assert decode_jpeg(jpegs[0]).width == 640, "same 640x480 canvas as the socket path"
-
-    asyncio.run(run())
-
-
-def test_a_thirty_fps_device_camera_keeps_every_frame():
-    """2026-11-05: a device camera showed 12-16 fps in Visual against 29-30 for the C920."""
+def test_camera_peer_forwards_at_most_fifteen_frames_per_second():
+    """2026-11-05: at 30 fps every device-camera connection stopped after about one second."""
 
     async def run():
         clock = [0.0]
@@ -119,7 +100,10 @@ def test_a_thirty_fps_device_camera_keeps_every_frame():
         camera = CameraPeer(on_jpeg, clock=lambda: clock[0])
         await camera.read(ScriptedTrack(clock, count=60, fps=30))  # 2 s of a 30 fps camera
         await camera.close()
-        assert len(jpegs) == 60
+        assert camera.metrics["frames"] == 60
+        assert 29 <= len(jpegs) <= 31, "15 fps, like the socket path"
+        assert camera.metrics["forwarded"] == len(jpegs)
+        assert decode_jpeg(jpegs[0]).width == 640, "same 640x480 canvas as the socket path"
 
     asyncio.run(run())
 

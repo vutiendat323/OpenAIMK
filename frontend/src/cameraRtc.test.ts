@@ -51,7 +51,7 @@ function camera() {
   return { rtc, peer }
 }
 
-it('sends the camera as send-only video at up to 30 frames per second', async () => {
+it('sends the camera as send-only video at up to 15 frames per second', async () => {
   const { rtc, peer } = camera()
   const offers: string[] = []
   await rtc.connect(track, async (sdp) => {
@@ -61,7 +61,7 @@ it('sends the camera as send-only video at up to 30 frames per second', async ()
   expect(peer.transceivers).toHaveLength(1)
   expect(peer.transceivers[0].track).toBe(track)
   expect(peer.transceivers[0].init.direction).toBe('sendonly')
-  expect(peer.transceivers[0].init.sendEncodings?.[0].maxFramerate).toBe(30)
+  expect(peer.transceivers[0].init.sendEncodings?.[0].maxFramerate).toBe(15)
   expect(offers).toEqual(['browser-offer'])
   expect(peer.remote).toEqual({ type: 'answer', sdp: 'server-answer' })
 })

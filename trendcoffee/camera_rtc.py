@@ -1,9 +1,10 @@
 """The guest's own camera (device mode) over WebRTC.
 
 The browser sends its camera as a WebRTC video track instead of JPEG packets on the
-kiosk socket. The API decodes the track (aiortc), keeps at most 30 frames per second
-(like the kiosk's own C920; the socket JPEG fallback stays at 15) and encodes each kept
-frame as a 640x480 JPEG, so Visual's interface does not change.
+kiosk socket. The API decodes the track (aiortc), keeps at most 15 frames per second
+(Visual analyses at most 15) and encodes each kept frame as a 640x480 JPEG, so Visual's
+interface does not change. 30 fps (2026-11-05) made every connection's video stop after
+about one second, so the device camera stays at 15.
 """
 
 import asyncio
@@ -16,9 +17,9 @@ from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import MediaStreamError
 
 WIDTH, HEIGHT = 640, 480
-MAX_FPS = 30
+MAX_FPS = 15
 # Keep a frame when at least this long has passed since the last kept frame; the
-# small margin keeps a 30 fps camera at 30 fps despite timing jitter.
+# small margin keeps a 15 fps camera at 15 fps despite timing jitter.
 MIN_INTERVAL = 1 / MAX_FPS - 0.005
 JPEG_QSCALE = 5  # fixed quality (lower is better); ~0.7 ms per 640x480 frame
 MAX_JPEG_BYTES = 256000  # the kiosk camera path accepts at most this size
