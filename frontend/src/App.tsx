@@ -19,7 +19,7 @@ import { PaymentQr } from './components/PaymentQr'
 import { AvatarAssistant } from './components/AvatarAssistant'
 import { SettingsDialog } from './components/SettingsDialog'
 import { VirtualKeyboard } from './components/VirtualKeyboard'
-import { isSettingsShortcut, saveSettingsVisible, storedSettingsVisible } from './settingsShortcut'
+import { matchShortcut, saveShown, storedShown } from './kioskShortcuts'
 import { DEFAULT_IDLE_SECONDS, idleNoticeMs } from './kioskTiming'
 import { usePreferences } from './usePreferences'
 import { initialNavigation, navigationReducer } from './navigation'
@@ -111,18 +111,23 @@ export default function App() {
     sidebar.current?.focus({ preventScroll: true })
     return () => window.removeEventListener('keydown', onKey)
   }, [navigation.open, navigation.view])
-  const [settingsVisible, setSettingsVisible] = useState(() => storedSettingsVisible())
+  const [settingsVisible, setSettingsVisible] = useState(() => storedShown('settings'))
+  const [keyboardEnabled, setKeyboardEnabled] = useState(() => storedShown('keyboard'))
   useEffect(() => {
-    // Staff shortcut: hide the Settings button from guests, or show it again.
+    // Staff shortcuts: Ctrl+Alt+S hides/shows the Settings button; Ctrl+Alt+K turns the
+    // on-screen keyboard off/on (for example while testing with a physical keyboard).
     const onKey = (event: KeyboardEvent) => {
-      if (!isSettingsShortcut(event)) return
+      const shortcut = matchShortcut(event)
+      if (!shortcut) return
       event.preventDefault()
-      setSettingsVisible((visible) => !visible)
+      if (shortcut === 'settings') setSettingsVisible((visible) => !visible)
+      else setKeyboardEnabled((enabled) => !enabled)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  useEffect(() => saveSettingsVisible(settingsVisible), [settingsVisible])
+  useEffect(() => saveShown('settings', settingsVisible), [settingsVisible])
+  useEffect(() => saveShown('keyboard', keyboardEnabled), [keyboardEnabled])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<Order | null>(null)
   const [error, setError] = useState('')
@@ -1024,7 +1029,7 @@ export default function App() {
           <ChevronUp aria-hidden="true" />
         </button>
       )}
-      <VirtualKeyboard />
+      {keyboardEnabled && <VirtualKeyboard />}
     </div>
   )
 }
