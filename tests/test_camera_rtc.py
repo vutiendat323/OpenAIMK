@@ -299,7 +299,7 @@ def test_a_camera_track_that_never_delivers_a_frame_is_stalled():
     asyncio.run(run())
 
 
-def test_a_camera_track_the_browser_ended_is_not_a_stall():
+def test_a_camera_track_that_ended_is_replaced_too():
     async def run():
         clock = [0.0]
 
@@ -309,7 +309,9 @@ def test_a_camera_track_the_browser_ended_is_not_a_stall():
         camera = CameraPeer(on_jpeg, clock=lambda: clock[0])
         camera.reader = asyncio.create_task(camera.read(ScriptedTrack(clock, count=3, fps=30)))
         await camera.reader
-        assert not camera.stalled(clock[0] + 10)
+        assert camera.metrics["track_ended"]
+        assert not camera.stalled(clock[0] + 1)
+        assert camera.stalled(clock[0] + 2.5)
         await camera.close()
 
     asyncio.run(run())

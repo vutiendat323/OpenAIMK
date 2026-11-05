@@ -7,7 +7,7 @@ frame as a 640x480 JPEG, so Visual's interface does not change.
 """
 
 import asyncio
-import contextlib
+import logging
 import time
 from fractions import Fraction
 
@@ -48,6 +48,18 @@ class CameraPeer:
             "max_gap_ms": 0,
         }
 
+        @self.pc.on("connectionstatechange")
+        def on_state():
+            # Evidence for a camera that stops after a few frames (2026-11-05).
+            self.metrics["state"] = self.pc.connectionState
+            if self.pc.connectionState in ("failed", "closed", "disconnected"):
+                logging.getLogger(__name__).warning(
+                    "Device camera connection %s at %s after %s frames",
+                    self.pc.connectionState,
+                    time.strftime("%H:%M:%S"),
+                    self.metrics["frames"],
+                )
+
         @self.pc.on("track")
         def on_track(track):
             if track.kind == "video" and self.reader is None:
@@ -76,12 +88,12 @@ class CameraPeer:
         )
 
     def stalled(self, now):
-        """True while the video track is read but no frame arrived for STALL_SECONDS.
+        """True when this connection's video gave no frame for STALL_SECONDS.
 
-        A track that ended (the browser closed it) is not a stall."""
+        That includes a track that ended (2026-11-05: it ended after 34 frames each time
+        while the page still counted the connection as up, so no camera reached Visual)."""
         since = self.last_frame_at if self.last_frame_at is not None else self.track_at
-        reading = self.reader is not None and not self.reader.done()
-        return reading and since is not None and now - since > STALL_SECONDS
+        return self.reader is not None and since is not None and now - since > STALL_SECONDS
 
     def encode(self, frame):
         if self.encoder is None:
@@ -96,29 +108,40 @@ class CameraPeer:
     async def read(self, track):
         metrics = self.metrics
         self.track_at = self.clock()
-        with contextlib.suppress(MediaStreamError):
-            while True:
-                frame = await track.recv()
-                now = self.clock()
-                metrics["frames"] += 1
-                if self.last_frame_at is not None:
-                    gap = round((now - self.last_frame_at) * 1000, 1)
-                    metrics["max_gap_ms"] = max(metrics["max_gap_ms"], gap)
-                self.last_frame_at = now
-                if self.last_kept_at is not None and now - self.last_kept_at < MIN_INTERVAL:
-                    continue
-                self.last_kept_at = now
-                jpeg = await asyncio.to_thread(self.encode, frame)
-                if len(jpeg) > MAX_JPEG_BYTES:
-                    metrics["oversize"] += 1
-                    continue
-                try:
-                    await self.on_jpeg(jpeg)
-                except Exception:
-                    # Visual may be reconnecting; the next frame tries again.
-                    metrics["send_errors"] += 1
-                    continue
-                metrics["forwarded"] += 1
+        try:
+            await self._read(track, metrics)
+        except MediaStreamError:
+            metrics["track_ended"] = True
+            logging.getLogger(__name__).warning(
+                "Device camera track ended at %s after %s frames (connection %s)",
+                time.strftime("%H:%M:%S"),
+                metrics["frames"],
+                self.pc.connectionState,
+            )
+
+    async def _read(self, track, metrics):
+        while True:
+            frame = await track.recv()
+            now = self.clock()
+            metrics["frames"] += 1
+            if self.last_frame_at is not None:
+                gap = round((now - self.last_frame_at) * 1000, 1)
+                metrics["max_gap_ms"] = max(metrics["max_gap_ms"], gap)
+            self.last_frame_at = now
+            if self.last_kept_at is not None and now - self.last_kept_at < MIN_INTERVAL:
+                continue
+            self.last_kept_at = now
+            jpeg = await asyncio.to_thread(self.encode, frame)
+            if len(jpeg) > MAX_JPEG_BYTES:
+                metrics["oversize"] += 1
+                continue
+            try:
+                await self.on_jpeg(jpeg)
+            except Exception:
+                # Visual may be reconnecting; the next frame tries again.
+                metrics["send_errors"] += 1
+                continue
+            metrics["forwarded"] += 1
 
     async def close(self):
         if self.reader is not None:
