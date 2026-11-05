@@ -147,6 +147,10 @@ class Worker:
             embedder=self.embedder,
             stt_delay_secs=0.7,
             vision_audio=bridge,
+            # With settings the stream runs its operator console: it streams lock, verdict
+            # and audio levels (never PCM) to Visual, so the Visual console shows the target
+            # lock and the audio monitor. Without them that console stayed empty.
+            speaker_settings=settings,
             on_stt_audio=audio,
             on_verdict=verdict,
         )

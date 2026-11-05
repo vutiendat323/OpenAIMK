@@ -18,8 +18,9 @@ export class RtcCamera {
     const peer = this.peer
     peer.addTransceiver(track, {
       direction: 'sendonly',
-      // Same rate as the JPEG path; Visual analyses at most 15 frames per second.
-      sendEncodings: [{ maxFramerate: 15, maxBitrate: 1_500_000 }],
+      // Like the kiosk's own C920 (2026-11-05: 12-16 fps here against 29-30 there). Visual
+      // still analyses at most 15 frames per second, always from the newest frame.
+      sendEncodings: [{ maxFramerate: 30, maxBitrate: 2_000_000 }],
     })
     await peer.setLocalDescription(await peer.createOffer())
     await new Promise<void>((done) => {
