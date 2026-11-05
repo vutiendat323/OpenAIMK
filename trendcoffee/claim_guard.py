@@ -101,8 +101,13 @@ def spoken_items(text, catalog, limit=SPOKEN_ITEMS_LIMIT):
     return [ident for _, _, ident in sorted(kept)][:limit]
 
 
-# "Paid" is a locked sentence: only a tool result that says paid may back it.
-PAID = re.compile(r"đã được thanh toán|đã thanh toán (xong|thành công)", re.IGNORECASE)
+# Trend words a paid result freely, but only a tool result that says paid may back it.
+PAID = re.compile(
+    r"đã được thanh toán|đã thanh toán (xong|thành công|rồi)"
+    r"|thanh toán (đã )?(xong|thành công) rồi|thanh toán thành công"
+    r"|đã nhận (được )?(tiền|thanh toán)",
+    re.IGNORECASE,
+)
 UNVERIFIED_PAID_NOTE = (
     "Kiosk check: this order is not verified as paid by any tool result. Never say it was "
     "paid. If the guest asked about payment, call kiosk_payment and relay its actual status; "
@@ -138,3 +143,53 @@ def recovery_turn(request, history, *, payment=False):
         "following the service instructions, and report only the real result."
     )
     return f'The guest just said (Vietnamese): "{request}"\n{context}{task}'
+
+
+def paid_summary(order):
+    """A short, factual description of a paid order, for Trend's own context."""
+    lines = []
+    for line in order.get("lines") or []:
+        text = f"{line.get('quantity', 1)} × {line.get('name', line.get('item_id', ''))}"
+        options = ", ".join(str(v) for v in (line.get("options") or {}).values())
+        if options:
+            text += f" ({options})"
+        if line.get("note"):
+            text += f" — ghi chú: {line['note']}"
+        lines.append(text)
+    if order.get("fulfillment") == "at_table":
+        where = f"tại bàn {order['table_label']}" if order.get("table_label") else "tại bàn"
+    elif order.get("fulfillment") == "takeaway":
+        where = "mang đi"
+    else:
+        where = str(order.get("fulfillment") or "")
+    parts = ["; ".join(lines) or "no lines"]
+    if order.get("total_vnd") is not None:
+        parts.append(f"total {order['total_vnd']} VND")
+    if where:
+        parts.append(where)
+    reference = (order.get("payment") or {}).get("merchant_order_id")
+    if reference:
+        parts.append(f"merchant order {reference}")
+    return ", ".join(parts)
+
+
+def paid_turn(order):
+    """The Codex turn the kiosk starts when the merchant verifies a guest's payment."""
+    return (
+        "Kiosk notice, not a guest message: the merchant has just verified payment for this "
+        f"guest's order ({paid_summary(order)}). Call kiosk_payment once to confirm its real "
+        "status. If it reports paid, tell the guest warmly, in your own words and one or two "
+        "short sentences, that the payment went through; you may mention this order (at most "
+        "two drink names, takeaway or table). Otherwise relay its real status as the service "
+        "instructions say. Do not create another order or payment. Keep this paid order in "
+        "mind for the guest's next questions."
+    )
+
+
+# Sent to the realtime voice layer when Codex cannot take the paid-order turn.
+def paid_note(order):
+    return (
+        "Kiosk notice: the merchant verified payment for this guest's order "
+        f"({paid_summary(order)}). Do not create another order or QR. If the guest asks about "
+        "payment, delegate so Codex calls kiosk_payment and relay only its result."
+    )

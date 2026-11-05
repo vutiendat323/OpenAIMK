@@ -59,9 +59,9 @@ def test_reference_cart_rail_and_editing(catalog, width, height, rail_width):
                 assert abs(box["x"] + box["width"] - width) <= 1, box
                 expect(page.locator(".menu-workspace")).to_be_visible()
                 expect(page.locator(".cart-review")).to_have_count(0)
-                expect(
-                    cart.get_by_role("button", name="Mang đi", exact=True)
-                ).to_have_attribute("aria-pressed", "true")
+                expect(cart.get_by_role("button", name="Mang đi", exact=True)).to_have_attribute(
+                    "aria-pressed", "true"
+                )
                 cards = cart.locator(".cart-line")
                 expect(cards).to_have_count(3)
                 milk = cards.filter(has=page.get_by_role("heading", name="Cà phê sữa", exact=True))

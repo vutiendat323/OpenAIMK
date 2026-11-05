@@ -407,3 +407,34 @@ def test_codex_voice_starts_a_turn_with_the_text(tmp_path):
         ]
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Đơn đã được thanh toán.",
+        "Tuyệt quá, bạn đã thanh toán thành công rồi nhé!",
+        "Thanh toán xong rồi, Cà phê sữa của bạn sắp có ngay.",
+        "Trend đã nhận được thanh toán, cảm ơn bạn nhiều!",
+        "Đơn của bạn đã thanh toán rồi đó.",
+    ],
+)
+def test_a_freely_worded_paid_result_is_still_recognised(sentence):
+    """The paid reply is not a fixed sentence (2026-11-05), so the guard reads its meaning."""
+    from trendcoffee.claim_guard import PAID
+
+    assert PAID.search(sentence)
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Bạn quét QR trên màn hình để thanh toán nhé.",
+        "Bạn muốn thanh toán luôn không?",
+        "QR vẫn đang chờ thanh toán nhé.",
+    ],
+)
+def test_payment_wording_that_claims_nothing_is_not_a_paid_result(sentence):
+    from trendcoffee.claim_guard import PAID
+
+    assert not PAID.search(sentence)

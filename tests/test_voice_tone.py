@@ -10,7 +10,17 @@ PAID_LINE = "Đơn đã được thanh toán."
 
 def test_exact_payment_sentences_stay_exact_in_both_prompts():
     for prompt in (INSTRUCTIONS, VOICE_INSTRUCTIONS):
-        assert QR_LINE in prompt and PAID_LINE in prompt
+        assert QR_LINE in prompt
+
+
+def test_the_paid_result_is_worded_naturally_not_a_fixed_sentence():
+    """User decision 2026-11-05: no hardcoded paid sentence."""
+    for prompt in (INSTRUCTIONS, VOICE_INSTRUCTIONS):
+        flat = " ".join(prompt.split())
+        assert PAID_LINE not in prompt
+        assert "own words" in flat
+        assert "status=paid" in flat or "payment_status is paid" in flat
+        assert "without another QR/order" in flat or "Do not create another order" in flat
 
 
 def test_checkout_replies_stay_short_and_unconfirmed():
@@ -60,4 +70,4 @@ def test_the_voice_layer_states_results_only_by_relaying_codex():
     assert "only when relaying Codex's result for the guest's latest request" in flat
     assert "If you have not delegated the latest request, delegate it now" in flat
     assert "never repeat an earlier result as if it were new" in flat.lower()
-    assert QR_LINE in VOICE_INSTRUCTIONS and PAID_LINE in VOICE_INSTRUCTIONS
+    assert QR_LINE in VOICE_INSTRUCTIONS and "the paid result below" in flat

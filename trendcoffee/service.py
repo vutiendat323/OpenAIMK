@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import secrets
@@ -54,9 +55,16 @@ class Service:
         if printer is None and queue:
             printer = CupsPrinter(queue)
         self.invoices = InvoicePrinter(self, printer) if printer else None
+        # Called as listener(session_id, order), from any thread, once per order when a
+        # merchant-verified payment first marks it paid (QR poll, invoice worker or a tool).
+        self.paid_listeners = []
+
+    @staticmethod
+    def session_id(token):
+        return hashlib.sha256(str(token).encode()).hexdigest()
 
     def _session(self, db, token):
-        sid = hashlib.sha256(str(token).encode()).hexdigest()
+        sid = self.session_id(token)
         row = db.execute("SELECT expires FROM sessions WHERE id=?", (sid,)).fetchone()
         if not row or row["expires"] < time.time():
             raise ServiceError("invalid_session", 401)
@@ -491,9 +499,11 @@ class Service:
 
     def _save_order(self, order, **updates):
         with self.store.connect(write=True) as db:
-            current = json.loads(
-                db.execute("SELECT data FROM orders WHERE id=?", (order["id"],)).fetchone()[0]
-            )
+            row = db.execute(
+                "SELECT session,data FROM orders WHERE id=?", (order["id"],)
+            ).fetchone()
+            current = json.loads(row["data"])
+            was_paid = current.get("payment_status") == "paid"
             if (
                 current.get("payment", {}).get("status") == "paid"
                 and current["payment"].get("source") == "merchant"
@@ -504,7 +514,17 @@ class Service:
             db.execute("UPDATE orders SET data=? WHERE id=?", (encode(current), order["id"]))
             if self.invoices and updates.get("merchant", {}).get("state") == "created":
                 self.invoices.track(current, db=db)
+        if not was_paid and current.get("payment_status") == "paid":
+            self._paid(row["session"], current)
         return current
+
+    def _paid(self, session, order):
+        """Tell listeners, after the paid state is committed; a listener never fails a save."""
+        for listener in list(self.paid_listeners):
+            try:
+                listener(session, json.loads(encode(order)))
+            except Exception:
+                logging.getLogger(__name__).exception("Paid-order listener failed")
 
     def _send_merchant(self, order):
         from .merchant import MerchantError

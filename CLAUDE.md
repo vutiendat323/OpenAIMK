@@ -44,7 +44,9 @@
 - Voice tone (updated 2026-11-03): warm, friendly-barista tone with light emotion in Vietnamese;
   2–3 short sentences (~40 words max) for conversation/suggestions; 1–2 friendly sentences (~25 words)
   after tool results; acknowledgment remains 4–8 words. Locked rules remain: exact QR payment sentence
-  ('Bạn quét QR trên màn hình để thanh toán nhé.') and exact paid sentence ('Đơn đã được thanh toán.');
+  ('Bạn quét QR trên màn hình để thanh toán nhé.'). The paid result is NOT a fixed sentence (user decision
+  2026-11-05): Trend words it naturally (1–2 friendly sentences, may mention the order) only after a
+  tool reports paid; `claim_guard.PAID` recognises free wording;
   no order confirmation questions before placing; at most two drink names spoken; never claim checkout/payment success before tool verification.
 - Speaker playout (added 2026-11-03): Pet character uses browser WebRTC audio via `SpeakerTrack`
   (`trendcoffee/speaker.py`) with a steady 20ms clock and ~500ms startup playout buffer to prevent
