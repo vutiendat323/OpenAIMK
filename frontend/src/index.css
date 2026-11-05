@@ -4380,6 +4380,64 @@ p {
   font-size: 12px;
   line-height: 1.5;
 }
+.kiosk-timing-group {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+}
+.kiosk-timing-group legend {
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.kiosk-timing-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.kiosk-timing-row small {
+  color: var(--settings-muted);
+  font-size: 12px;
+}
+.kiosk-timing-error,
+.kiosk-timing-row small.kiosk-timing-error {
+  color: #c0392b;
+}
+.kiosk-timing-input {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--settings-muted);
+}
+.kiosk-timing-input input {
+  width: 84px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--settings-control);
+  color: var(--foreground, inherit);
+  font: inherit;
+  text-align: right;
+}
+.kiosk-timing-code input {
+  width: 160px;
+  text-align: left;
+}
+.kiosk-timing-input input[aria-invalid='true'] {
+  border-color: #c0392b;
+}
+.kiosk-timing-input input:focus-visible {
+  outline: 2px solid #78889c;
+  outline-offset: 2px;
+}
+.kiosk-timing-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
 .settings-close:hover,
 .settings-sidebar button:hover {
   background: var(--settings-control);

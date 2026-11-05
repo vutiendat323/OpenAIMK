@@ -1,4 +1,5 @@
 import type { MenuCategory, MenuItem, Order, Payment, Progress } from './types'
+import type { KioskTimingInfo, TimingValues } from './kioskTiming'
 
 const messages: Record<string, string> = {
   invalid_session: 'Phiên khách đã hết hạn. Bạn tải lại trang để bắt đầu lại.',
@@ -15,6 +16,9 @@ const messages: Record<string, string> = {
   sold_out: 'Món này đang hết. Bạn chọn món khác nhé.',
   invalid_options: 'Tùy chọn này chưa được hỗ trợ.',
   quantity_limit: 'Mỗi yêu cầu tối đa 100 món.',
+  staff_forbidden: 'Mã nhân viên không đúng.',
+  staff_disabled: 'Server chưa bật mã nhân viên (TREND_STAFF_TOKEN).',
+  invalid_kiosk_timing: 'Có giá trị nằm ngoài giới hạn cho phép.',
 }
 export class ApiError extends Error {
   code: string
@@ -86,6 +90,14 @@ export const api = {
       12000,
     ),
   progress: (token: string) => request<Progress>('progress', token),
+  kioskTiming: () => request<KioskTimingInfo>('kiosk/timing'),
+  saveKioskTiming: (staffCode: string, values: TimingValues) =>
+    request<KioskTimingInfo & { applies: 'now' | 'next_guest' }>(
+      'kiosk/timing',
+      staffCode,
+      'PUT',
+      values,
+    ),
 }
 export const money = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + 'đ'
 export const folded = (value: string) =>

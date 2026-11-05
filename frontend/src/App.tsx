@@ -20,6 +20,7 @@ import { AvatarAssistant } from './components/AvatarAssistant'
 import { SettingsDialog } from './components/SettingsDialog'
 import { VirtualKeyboard } from './components/VirtualKeyboard'
 import { isSettingsShortcut, saveSettingsVisible, storedSettingsVisible } from './settingsShortcut'
+import { DEFAULT_IDLE_SECONDS, idleNoticeMs } from './kioskTiming'
 import { usePreferences } from './usePreferences'
 import { initialNavigation, navigationReducer } from './navigation'
 import type { NavigationAction } from './navigation'
@@ -293,6 +294,22 @@ export default function App() {
     setToken('')
     setBootRevision((value) => value + 1)
   }
+  // Staff-tuned idle time (Settings → Kiosk); read again for every new guest.
+  const idleSeconds = useRef(DEFAULT_IDLE_SECONDS)
+  useEffect(() => {
+    let active = true
+    api
+      .kioskTiming()
+      .then((timing) => {
+        if (active) idleSeconds.current = timing.values.idle_seconds
+      })
+      .catch(() => {
+        // Keep the previous value; the server still ends idle voice sessions itself.
+      })
+    return () => {
+      active = false
+    }
+  }, [bootRevision])
   const idleActions = useRef({
     activity: voice.activity,
     active: voice.isActive,
@@ -322,8 +339,8 @@ export default function App() {
         return
       }
       const elapsed = Date.now() - lastActivity.current
-      if (elapsed >= 120000) idleActions.current.reset()
-      else if (elapsed >= 90000) setIdle(true)
+      if (elapsed >= idleSeconds.current * 1000) idleActions.current.reset()
+      else if (elapsed >= idleNoticeMs(idleSeconds.current)) setIdle(true)
     }, 1000)
     return () => {
       clearInterval(timer)

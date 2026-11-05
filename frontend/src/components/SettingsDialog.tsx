@@ -8,6 +8,7 @@ import {
   Moon,
   Settings,
   Sun,
+  Timer,
   UserRound,
   X,
 } from 'lucide-react'
@@ -23,10 +24,12 @@ import {
   DialogTrigger,
 } from './ui/dialog'
 import { usePreferences } from '../usePreferences'
+import { KioskTimingSettings } from './KioskTimingSettings'
 import type { useKioskVoice } from '../useKioskVoice'
 
 const sections = [
   { id: 'general', label: 'Chung', icon: Settings },
+  { id: 'kiosk', label: 'Kiosk', icon: Timer },
   { id: 'profile', label: 'Hồ sơ', icon: UserRound },
   { id: 'data', label: 'Dữ liệu', icon: Database },
   { id: 'about', label: 'Giới thiệu', icon: Info },
@@ -254,6 +257,7 @@ export function SettingsDialog({ voice }: { voice: ReturnType<typeof useKioskVoi
                 )}
               </>
             )}
+            {section === 'kiosk' && <KioskTimingSettings />}
           </section>
         </div>
       </DialogContent>

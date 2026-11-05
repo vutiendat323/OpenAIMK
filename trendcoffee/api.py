@@ -70,9 +70,28 @@ class Transition(Input):
     payment_status: str | None = Field(default=None, max_length=40)
 
 
+class TimingUpdate(Input):
+    """Session start/end boundaries; omitted fields keep their current value."""
+
+    presence_distance_m: float | None = None
+    enter_seconds: float | None = None
+    leave_seconds: float | None = None
+    idle_seconds: float | None = None
+    session_limit_seconds: float | None = None
+    warning_seconds: float | None = None
+
+
 def create_app(service=None, staff_token=None, semantic=None, kiosk_host=None):
     svc = service or Service(
         os.environ.get("TREND_DB", ".runtime/trendcoffee.db"), merchant=from_environment()
+    )
+    from .kiosk_timing import KioskTiming
+
+    # Kept next to the database (.runtime/ by default), so it survives API restarts.
+    session_bounds = (
+        kiosk_host.timing
+        if kiosk_host is not None and getattr(kiosk_host, "timing", None) is not None
+        else KioskTiming(svc.store.path.parent / "kiosk-timing.json")
     )
     secret = staff_token if staff_token is not None else os.environ.get("TREND_STAFF_TOKEN", "")
     agent = Agent(svc, semantic=semantic)
@@ -84,7 +103,10 @@ def create_app(service=None, staff_token=None, semantic=None, kiosk_host=None):
         root = Path(__file__).resolve().parent.parent
         visual_url = "ws://127.0.0.1:9877"
         kiosk_host = InteractionHost(
-            svc, visual_url=visual_url, fusion=FusionProcess(root, visual_url)
+            svc,
+            visual_url=visual_url,
+            fusion=FusionProcess(root, visual_url),
+            timing=session_bounds,
         )
 
     @asynccontextmanager
@@ -197,6 +219,18 @@ def create_app(service=None, staff_token=None, semantic=None, kiosk_host=None):
             "audio_gate": kiosk_host.audio_gate if kiosk_host and kiosk_host.active else None,
             "audio_metrics": kiosk_host.audio_metrics if kiosk_host else {},
         }
+
+    @app.get("/api/kiosk/timing")
+    def kiosk_timing():
+        return session_bounds.describe()
+
+    @app.put("/api/kiosk/timing", dependencies=[Depends(staff)])
+    def update_kiosk_timing(data: TimingUpdate):
+        result = session_bounds.update(data.model_dump(exclude_none=True))
+        # Presence limits apply now when no guest is in a session, otherwise after it ends;
+        # session limits always start with the next guest.
+        applied = bool(kiosk_host and kiosk_host.apply_timing())
+        return {**result, "applies": "now" if applied or not kiosk_host else "next_guest"}
 
     @app.get("/api/kiosk/voices")
     async def kiosk_voices():
