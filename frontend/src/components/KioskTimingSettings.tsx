@@ -91,7 +91,7 @@ export function KioskTimingSettings() {
       {timingGroups.map((group) => (
         <fieldset key={group.title} className="kiosk-timing-group">
           <legend>{t(group.title)}</legend>
-          {group.fields.map(({ name, label, unit }) => {
+          {group.fields.map(({ name, label, unit, hint }) => {
             const limit = info.limits[name]
             const error = errors[name]
             const id = 'kiosk-timing-' + name
@@ -99,6 +99,7 @@ export function KioskTimingSettings() {
               <div key={name} className="settings-row kiosk-timing-row">
                 <label htmlFor={id}>
                   {t(label)}
+                  {hint && <small className="kiosk-timing-hint">{t(hint)}</small>}
                   <small>
                     {limit.min}–{limit.max} {unit} · {t('mặc định')} {info.defaults[name]} {unit}
                   </small>

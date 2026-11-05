@@ -341,7 +341,8 @@ export default function App() {
         return
       }
       const elapsed = Date.now() - lastActivity.current
-      // No on-screen countdown: in a voice session Trend says the warning itself.
+      // No on-screen countdown. In a voice session the server has Trend ask a quiet guest
+      // instead; without a voice session nobody can ask, so the screen resets for the next guest.
       if (elapsed >= idleSeconds.current * 1000) idleActions.current.reset()
     }, 1000)
     return () => {
