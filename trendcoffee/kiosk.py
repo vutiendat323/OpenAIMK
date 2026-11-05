@@ -106,10 +106,10 @@ def boundary_speech(kind, voice=None):
     return {"text": BOUNDARY_TEXT[kind], "voice": voice, "audio": audio}
 
 
-# After an idle/time-limit/next-guest end, the same guest is not greeted again at once; if
-# they are still standing at the kiosk after this long, a new session opens for them
-# (user decision 2026-11-05: a guest who stays must not need to leave the camera first).
-BLOCK_SECONDS = 10.0
+# After an idle/time-limit/next-guest end, a guest still standing at the kiosk is treated as
+# a new customer: no pause, only the usual enter_seconds (user decision 2026-11-05). A
+# positive value would hold the same track back for that long after a session ends.
+BLOCK_SECONDS = 0.0
 
 
 class PresencePolicy:
