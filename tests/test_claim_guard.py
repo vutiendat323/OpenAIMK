@@ -438,3 +438,95 @@ def test_payment_wording_that_claims_nothing_is_not_a_paid_result(sentence):
     from trendcoffee.claim_guard import PAID
 
     assert not PAID.search(sentence)
+
+
+# 2026-11-05: "Bạn quét Q.." was cut although the QR was real. A guest remark of three or
+# more words while Codex was still working moved the request past the tool, so the guard
+# treated the real result as made up.
+
+
+def test_a_remark_while_codex_works_does_not_cut_the_real_result():
+    guard = ClaimGuard()
+    guard.guest("Cho mình một kem tươi mang đi", 10.0)
+    guard.tool(12.0)  # kiosk_checkout: the QR is on screen
+    guard.guest("Ừ nhanh nha bạn ơi", 16.0)
+    assert not guard.reply("a1", FABRICATED[0], 18.0)
+
+
+def test_a_long_acknowledgement_does_not_use_up_the_tool_result():
+    guard = ClaimGuard()
+    guard.guest("Cho mình một kem tươi mang đi", 10.0)
+    guard.tool(12.0)
+    guard.done("Dạ, kem tươi mang đi, để mình đặt luôn nhé. Bạn chờ mình chút nha.", 13.0)
+    guard.guest("Ừ nhanh nha bạn ơi", 16.0)
+    assert not guard.reply("a1", FABRICATED[0], 18.0)
+
+
+def test_a_result_already_read_out_cannot_be_repeated_as_new():
+    guard = ClaimGuard()
+    guard.guest("Cho mình một kem tươi mang đi", 10.0)
+    guard.tool(12.0)
+    assert not guard.reply("a1", FABRICATED[0], 14.0)
+    guard.done(FABRICATED[0], 15.0)
+    guard.guest("Bao nhiêu tiền vậy bạn", 20.0)
+    assert guard.reply("a2", FABRICATED[0], 22.0)
+
+
+def test_an_old_unread_tool_result_does_not_cover_a_much_later_claim():
+    guard = ClaimGuard()
+    guard.guest("Cho mình một kem tươi mang đi", 10.0)
+    guard.tool(12.0)
+    guard.guest("Ừ nhanh nha bạn ơi", 16.0)
+    assert guard.reply("a1", FABRICATED[0], 12.0 + 31)
+
+
+def test_the_kiosk_plays_the_real_qr_after_a_guest_remark(svc):
+    """End to end through the host: the reply is not interrupted."""
+
+    async def run():
+        host, speaker, _, on_tool, on_event = await voice_host(svc)
+        clock = [1000.0]
+        host.clock = lambda: clock[0]
+        await on_event(
+            "thread/realtime/transcript/done",
+            {"role": "user", "text": "Cho mình một kem tươi mang đi", "turnId": "u1"},
+        )
+        clock[0] += 2
+        await on_tool({"tool": "kiosk_cart", "arguments": {"action": "view"}, "callId": "c1"})
+        clock[0] += 4
+        await on_event(
+            "thread/realtime/transcript/done",
+            {"role": "user", "text": "Ừ nhanh nha bạn ơi", "turnId": "u2"},
+        )
+        clock[0] += 2
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
+        speaker.calls.clear()
+        await on_event(
+            "thread/realtime/transcript/delta",
+            {"role": "assistant", "delta": FABRICATED[0], "turnId": "a1"},
+        )
+        assert "interrupt" not in speaker.calls
+        assert host.audio_metrics.get("unbacked_claims", 0) == 0
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_a_guest_turn_that_cuts_trend_off_is_logged_and_counted(svc, caplog):
+    """ "Dạ, k..." cut: a guest turn (or Trend's own echo) interrupted the reply. Numbers only."""
+
+    async def run():
+        host, speaker, _, _, on_event = await voice_host(svc)
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
+        speaker.queued_ms = 480  # most of the reply is still waiting to play
+        with caplog.at_level("WARNING", logger="trendcoffee.kiosk"):
+            await on_event("thread/realtime/userTurn/started", {"turnId": "u2"})
+        assert "interrupt" in speaker.calls
+        assert host.audio_metrics["reply_cuts"] == {"count": 1, "dropped_ms": 480}
+        assert "cut Trend off" in caplog.text and "480 ms" in caplog.text
+        speaker.queued_ms = 0  # nothing left of a reply: not a cut
+        await on_event("thread/realtime/userTurn/started", {"turnId": "u3"})
+        assert host.audio_metrics["reply_cuts"]["count"] == 1
+        await host.close()
+
+    asyncio.run(run())

@@ -799,7 +799,7 @@ class InteractionHost:
                 ):
                     return
                 show = ids
-                if guard.backed():
+                if guard.backed(self.clock()):
                     # A tool answered. Only a menu view for this request that lacks the drinks
                     # Trend named needs help; cart, payment and other screens are left alone.
                     screen = self.screen
@@ -886,6 +886,19 @@ class InteractionHost:
                         dropped = self.speaker.buffered_ms()
                         self.speaker.interrupt()
                     self._recent_fusion(turn="user", dropped_ms=dropped)
+                    if dropped:
+                        # Either the guest spoke over Trend or Trend's own voice came back
+                        # through the microphone; fusion_recent around this time tells which.
+                        cuts = self.audio_metrics.setdefault(
+                            "reply_cuts", {"count": 0, "dropped_ms": 0}
+                        )
+                        cuts["count"] += 1
+                        cuts["dropped_ms"] += dropped
+                        logging.getLogger(__name__).warning(
+                            "A guest turn cut Trend off at %s; %d ms of the reply dropped",
+                            time.strftime("%H:%M:%S"),
+                            dropped,
+                        )
                 else:
                     reply_stopped[0] = False
                     if self.speaker is not None:
@@ -938,6 +951,7 @@ class InteractionHost:
                 ):
                     await stop_unbacked_result()  # no partial text arrived for this reply
                 if role == "assistant":
+                    guard.done(text, self.clock())
                     show_spoken_items(text)
                 if role in ("user", "assistant"):
                     self._recent_fusion(tr=role, final=True)
