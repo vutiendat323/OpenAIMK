@@ -104,7 +104,9 @@ def exercise_async_guest_boundaries(browser, base):
     page.get_by_role("button", name="Xem Cà phê đen", exact=True).click()
     page.locator(".product-add").get_by_role("button", name="Thêm").click()
     page.clock.fast_forward(91000)
-    page.get_by_text("Phiên sẽ kết thúc sau 30 giây không tương tác.", exact=False).wait_for()
+    # No on-screen countdown any more (2026-11-05): Trend speaks the warning in a voice session.
+    expect(page.get_by_text("không tương tác", exact=False)).to_have_count(0)
+    expect(page.locator(".cart-line")).to_have_count(1)
     expect(page.get_by_role("dialog")).to_have_count(0)
     page.clock.fast_forward(30000)
     page.get_by_role("button", name="Xem Cà phê đen", exact=True).wait_for()

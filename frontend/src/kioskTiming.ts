@@ -59,8 +59,3 @@ export function timingErrors(values: TimingValues, limits: KioskTimingInfo['limi
   }
   return errors
 }
-
-/** The screen shows "still there?" at three quarters of the idle time, as before (90 of 120 s). */
-export function idleNoticeMs(idleSeconds: number) {
-  return Math.round(idleSeconds * 750)
-}

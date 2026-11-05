@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { idleNoticeMs, parseTimingInput, timingErrors } from './kioskTiming'
+import { parseTimingInput, timingErrors } from './kioskTiming'
 import type { KioskTimingInfo, TimingValues } from './kioskTiming'
 
 const defaults: TimingValues = {
@@ -43,9 +43,5 @@ describe('kiosk session timing', () => {
     expect(parseTimingInput('')).toBeNaN()
     expect(parseTimingInput('abc')).toBeNaN()
     expect(parseTimingInput('-3')).toBeNaN()
-  })
-  it('keeps the idle notice at three quarters of the idle time', () => {
-    expect(idleNoticeMs(120)).toBe(90000)
-    expect(idleNoticeMs(60)).toBe(45000)
   })
 })

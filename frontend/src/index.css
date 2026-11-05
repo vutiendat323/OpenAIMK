@@ -3141,15 +3141,6 @@ p {
 .cart-sidebar {
   align-self: start;
 }
-.idle-notice {
-  position: static;
-  width: 100%;
-  padding: 8px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  font-size: 12px;
-}
 
 @media (min-width: 1151px) {
   .cart-sidebar {
@@ -4651,7 +4642,7 @@ p {
 :root[data-theme='dark'] .simple-kiosk .remove-line {
   color: var(--foreground);
 }
-:root[data-theme='dark'] .simple-kiosk :is(.form-error, .idle-notice, .unavailable) {
+:root[data-theme='dark'] .simple-kiosk :is(.form-error, .unavailable) {
   background: #3d3026;
   color: #f3c19e;
 }
@@ -5746,7 +5737,7 @@ p {
   min-height: 0;
   overflow: hidden;
 }
-.simple-kiosk:not(.assistant-idle) > :is(.seasonal-banner, .topbar, .idle-notice) {
+.simple-kiosk:not(.assistant-idle) > :is(.seasonal-banner, .topbar) {
   flex: none;
 }
 .simple-kiosk:not(.assistant-idle) .kiosk-layout {
