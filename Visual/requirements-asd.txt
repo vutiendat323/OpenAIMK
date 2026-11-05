@@ -1,0 +1,6 @@
+# Optional: only needed to run the Light-ASD audio feature helper
+# (Visual/infrastructure/active_speaker/light_asd.py::prepare_audio) and the
+# tests that exercise it.  Install into an isolated --target, never system
+# Python or user site, and put that target on PYTHONPATH:
+#   python3 -m pip install --target <dir> -r requirements-asd.txt
+python_speech_features==0.6

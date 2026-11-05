@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>METEK · Kiosk Mission Control</title>
+  <link rel="icon" type="image/png" href="/img/metek-mark.png">
+  <link rel="stylesheet" href="/css/console.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to monitoring</a>
+  <div class="app">
+    <header class="titlebar"><img class="logo" src="/img/metek-wordmark.png" alt="METEK"><span class="header-divider"></span><span class="header-caption">AI OPERATIONS</span><div class="language-switch" role="group" aria-label="Interface language"><button type="button" data-language="vi" lang="vi" aria-label="Tiếng Việt" aria-pressed="false">VI</button><button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="true">EN</button></div><span class="conn"><span class="dot off" id="conn-dot"></span><span id="conn-text">Connecting</span></span></header>
+    {% block content %}{% endblock %}
+  </div>
+  <script src="/js/i18n.js" defer></script>
+  <script src="/js/console.js" defer></script>
+  <script src="/js/mission.js" defer></script>
+</body>
+</html>

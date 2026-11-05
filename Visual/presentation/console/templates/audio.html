@@ -1,0 +1,9 @@
+<section class="audio-panel" aria-labelledby="audio-heading">
+  <div class="section-heading"><h2 id="audio-heading">Audio monitor</h2><span class="micro-label" id="audio-status">Awaiting microphone</span></div>
+  <div class="audio-layout"><div class="waveform"><canvas id="waveform" width="1000" height="140" aria-label="Incoming microphone waveform"></canvas><div class="wave-axis"><span>MIC INPUT · AFTER ENHANCEMENT</span><span id="sample-rate">16 kHz · mono</span></div></div>
+    <div class="audio-readings"><div class="reading"><span>Input level</span><strong id="audio-db"><span id="audio-db-value">--</span><small>dBFS</small></strong></div><meter id="audio-meter" min="-96" max="0" value="-96" aria-label="Microphone energy in dBFS"></meter>
+      <div class="mini-row"><span>Raw level</span><b id="raw-db">--</b></div><div class="mini-row"><span>Noise reduction</span><b id="noise-status">Waiting</b></div><div class="mini-row"><span>STT audio gate</span><b id="mask-status">Waiting</b></div>
+      <div class="mini-row"><span>Listen to target audio</span><button id="target-audio-toggle" class="target-audio-toggle" type="button" role="switch" aria-checked="false" aria-label="Listen to target audio on the OpenJarvis machine" aria-describedby="target-audio-note" disabled>OFF</button></div>
+      <div id="target-audio-note" class="monitor-note" aria-live="polite">Available during a kiosk voice session.</div></div>
+  </div>
+</section>

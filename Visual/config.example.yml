@@ -1,0 +1,91 @@
+# =============================================================================
+# OpenJarvis AI — Configuration Reference
+# =============================================================================
+# Copy to config.yml and uncomment keys you want to override.
+# All keys are optional — omitted keys use the defaults in AI/config.py.
+#
+# DISCOVERY ORDER (when no explicit path is given):
+#   1. Explicit:   python3 AI/main.py --config /path/to/config.yml
+#   2. Env var:    export JARVIS_CONFIG=/path/to/config.yml
+#   3. Auto:       config.yml in the current or any parent directory
+#
+# USAGE:
+#   cp AI/config.example.yml config.yml
+#   # edit config.yml, uncomment the keys you want to change
+#   python3 AI/main.py                        # auto-discovers config.yml
+#   python3 AI/main.py --config my_conf.yml   # explicit path
+# =============================================================================
+
+# --- Camera ---
+# camera_id: 0
+# camera_width: 640
+# camera_height: 480
+
+# --- Calibration (camera intrinsics) ---
+# use_calibration: true
+# calibration_path: "tools/chessboard/calibration.npz"
+# use_undistort: true
+# camera_fx: 500.0
+# camera_fy: 500.0
+# camera_cx: 320.0
+# camera_cy: 240.0
+
+# --- SCRFD – Face Detection ---
+# scrfd_model: "AI/models/scrfd_2.5g_face.onnx"
+# scrfd_conf: 0.5
+# scrfd_nms: 0.4
+# scrfd_input_size: [320, 320]
+
+# --- ByteTrack – Multi-Face Tracking ---
+# track_buffer: 15
+# track_thresh: 0.5
+# match_thresh: 0.3
+# match_thresh_second: 0.5
+# track_init_thresh: 0.7
+
+# --- Face Embedder — ReID ---
+# embedder_model_path: "AI/models/face_embedder.onnx"
+# embedder_device: "cuda"
+# reid_weight: 0.6
+# gallery_size: 10
+
+# --- Metric3Dv2 – Monocular Depth ---
+# metric3d_variant: "vit_small"
+# metric3d_input_size: [616, 1064]
+# metric3d_canonical_focal: 1000.0
+# metric3d_depth_range: [0.1, 200.0]
+# metric3d_half: false
+# depth_interval_sec: 1.0
+
+# --- Active speaker (Light-ASD) ---
+# asd_provider: none               # none | light_asd
+# asd_model_path: ~/.cache/openjarvis/light_asd/light_asd.onnx
+# asd_audio_offset_secs: 0.0        # finite, -1.0..+1.0; video = audio + offset
+
+# --- Spoof Detection ---
+# spoof_enabled: true
+# spoof_interval_sec: 0.5
+# spoof_live_threshold: 0.60
+
+# --- Thresholds ---
+# distance_threshold: 1.0
+
+# --- Async Pipeline ---
+# async_depth: true
+# async_detect: true
+
+# --- Visualization ---
+
+# --- Device ---
+# device: "cuda"
+
+# =============================================================================
+# DEPTH HEATMAP — mini depth visualization overlay
+# =============================================================================
+# Press 'H' during runtime to toggle on/off.
+
+# =============================================================================
+# DEPTH CALIBRATION — guided multi-point regression
+# =============================================================================
+# Press 'C' to enter calibration mode. Follow the on-screen instructions.
+# After calibration completes, scale + offset are written to this file.

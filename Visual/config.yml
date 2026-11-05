@@ -1,0 +1,13 @@
+ws_enabled: true
+ws_port: 9876
+
+# Depth burst nho lai: 395ms -> ~48ms, nen track khong bi chan.
+# Doi so nay lam depth lech mot he so scale co dinh -> chay lai calibration.
+metric3d_input_size: [308, 532]
+
+# PR-9 Light-ASD (GPU via device). Needs python_speech_features importable
+# (e.g. PYTHONPATH=/home/robber/Work/jarvis/.superpowers/light-asd-pr9/asd-deps). Offset calibrated
+# 2026-09-28 (sweep flat, best 0.0).
+asd_provider: light_asd
+asd_model_path: ~/.cache/openjarvis/light_asd/light_asd.onnx
+asd_audio_offset_secs: 0.0

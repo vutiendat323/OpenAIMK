@@ -1,0 +1,33 @@
+{% extends "templates/base.html" %}
+{% block content %}
+<main class="cockpit" id="main-content">
+  <div class="workspace-heading">
+    <div><p class="eyebrow">Kiosk operations</p><h1>Mission Control</h1></div>
+    <div class="heading-actions"><span class="device"><span class="dot off" id="camera-dot"></span><span id="camera">Camera</span></span><button class="button secondary" id="open-tuning" aria-controls="tuning-drawer" aria-expanded="false">Live tuning <span aria-hidden="true">↗</span></button></div>
+  </div>
+  <div class="cockpit-grid">
+    <section class="visual-column" aria-label="Visual monitoring">
+      {% include "templates/camera.html" %}
+      {% include "templates/audio.html" %}
+      <div class="below">
+        <div class="chart"><div class="label">Proximity · last 12 seconds</div><canvas id="spark" width="1000" height="200" aria-label="Filtered and raw face distance history"></canvas>
+          <div class="legend"><span><i></i>Filtered</span><span><i class="raw"></i>Raw</span><span><i class="thr"></i>Alert threshold</span></div></div>
+        <div><div class="label">Landmark gate</div><div class="meter" id="gate"></div><div class="gate-note"><b id="gate-pct">--</b> of recent frames accepted</div></div>
+      </div>
+    </section>
+    <aside class="intelligence-column" aria-label="AI decisions">
+      {% include "templates/status.html" %}
+      <section class="proximity-panel" aria-labelledby="proximity-heading">
+        <div class="section-heading"><h2 id="proximity-heading">Visual & proximity</h2><span class="micro-label">Nearest face</span></div>
+        <div class="metric"><div class="name"><b id="t-name">No target</b><span class="state" id="t-state">No face</span></div><div class="num" id="t-dist">--<small>m</small></div></div>
+        <div class="fx"><span class="t">Liveness</span><span class="v" id="t-live">--</span></div>
+        <div class="fx"><span class="t">Raw distance</span><span class="s">Before smoothing</span><span class="v" id="t-raw">--</span></div>
+        <div class="fx"><span class="t">Body presence</span><span class="s">YOLO + Metric3D</span><span class="v" id="t-body">--</span></div>
+        <div class="section-heading other-heading"><h3>Other faces</h3><span class="micro-label" id="face-count">0 tracked</span></div><div id="faces"></div>
+      </section>
+    </aside>
+  </div>
+  <footer class="workspace-footer"><span><span class="dot off" id="voice-dot"></span><span id="voice-connection">Waiting for a kiosk voice session</span></span><span id="last-update">No telemetry yet</span></footer>
+</main>
+{% include "templates/drawer.html" %}
+{% endblock %}

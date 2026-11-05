@@ -1,0 +1,631 @@
+"""Session audio mirrored to Vision through its dedicated WebSocket protocol."""
+
+import asyncio
+import base64
+import json
+import time
+from contextlib import asynccontextmanager
+
+import pytest
+
+from audio.domain.evidence import FaceTrackBuffer
+from audio.infrastructure.config.toml_store import load_speaker_settings
+from audio.infrastructure.vision.asd_bridge import VisionAudioBridge
+
+
+class FakeSocket:
+    def __init__(self):
+        self.sent = []
+        self.inbound = asyncio.Queue()
+        self.closed = False
+
+    async def send(self, raw):
+        if self.closed:
+            raise RuntimeError("socket already closed")
+        self.sent.append(json.loads(raw))
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        value = await self.inbound.get()
+        if value is None:
+            raise StopAsyncIteration
+        return json.dumps(value)
+
+    def status(self, stream_id, status):
+        self.inbound.put_nowait(
+            {"event": "asd_audio_status", "stream_id": stream_id, "status": status}
+        )
+
+
+async def eventually(check):
+    for _ in range(100):
+        if check():
+            return
+        await asyncio.sleep(0.01)
+    assert check()
+
+
+@pytest.mark.anyio
+async def test_wait_for_asd_evidence_uses_current_chunk_deadline():
+    now = time.time()
+    faces = FaceTrackBuffer()
+    faces.set_asd_stream("current")
+    event = {
+        "event": "faces",
+        "ts": now,
+        "tracks": [
+            {
+                "track_id": 2,
+                "distance_m": 0.7,
+                "mouth_activity": 0.05,
+                "active_speaker_probability": None,
+            }
+        ],
+    }
+    faces.add(event)
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    bridge._ready = True
+    bridge._stream_id = "current"
+    bridge._start, bridge._samples = now - 1.2, 19200
+
+    async def publish():
+        await asyncio.sleep(0.02)
+        result = {"event": "faces", "ts": now, "tracks": [dict(event["tracks"][0])]}
+        result["tracks"][0]["asd"] = {
+            "stream_id": "current",
+            "t0": now - 0.8,
+            "frame_secs": 0.04,
+            "probabilities": [0.8] * 25,
+        }
+        faces.add(result)
+
+    task = asyncio.create_task(publish())
+    await bridge.wait_for_evidence(faces, now - 0.08, now, timeout=0.12)
+    await task
+    assert faces.active_speaker(
+        2, now - 0.08, now, stream_id="current", now=now
+    ) == pytest.approx(0.8)
+
+    old = len(faces._events)
+    start = time.monotonic()
+    await bridge.wait_for_evidence(faces, now - 0.9, now - 0.82, timeout=0.02)
+    assert time.monotonic() - start < 0.07
+    assert len(faces._events) == old
+    assert bridge.asd_late == 1
+
+
+@pytest.mark.anyio
+async def test_wait_follows_the_given_track_not_the_nearest_face():
+    # Pinned to the customer, Vision pushes ASD for their track only; a
+    # nearer bystander has none, so waiting on the nearest face times out.
+    now = time.time()
+    faces = FaceTrackBuffer()
+    faces.set_asd_stream("current")
+    faces.use_pushed_asd(True)
+    faces.add(
+        {
+            "event": "faces",
+            "ts": now,
+            "tracks": [
+                {"track_id": 7, "distance_m": 1.2, "mouth_activity": 0.6},
+                {"track_id": 9, "distance_m": 0.8, "mouth_activity": 0.1},
+            ],
+        }
+    )
+    faces.add_asd(
+        {
+            "stream_id": "current",
+            "track_id": 7,
+            "t0": now - 0.5,
+            "frame_secs": 0.04,
+            "probabilities": [0.95] * 25,
+        }
+    )
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    bridge._ready = True
+    bridge._stream_id = "current"
+    bridge._start, bridge._samples = now - 1.2, 19200
+
+    await bridge.wait_for_evidence(faces, now - 0.08, now, timeout=0.12, track_id=7)
+    assert bridge.last_wait_timed_out is False and bridge.asd_late == 0
+
+    await bridge.wait_for_evidence(faces, now - 0.08, now, timeout=0.02)
+    assert bridge.last_wait_timed_out is True  # the nearest face, 9, has none
+
+
+@pytest.mark.anyio
+async def test_wait_skips_before_ready_or_one_second_warmup():
+    now = time.time()
+    faces = FaceTrackBuffer()
+    faces.set_asd_stream("current")
+    faces.add(
+        {
+            "event": "faces",
+            "ts": now,
+            "tracks": [
+                {
+                    "track_id": 2,
+                    "distance_m": 0.7,
+                    "mouth_activity": 0.05,
+                }
+            ],
+        }
+    )
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    start = time.monotonic()
+    await bridge.wait_for_evidence(faces, now - 0.08, now, timeout=0.12)
+    bridge._ready = True
+    bridge._stream_id = "current"
+    bridge._start, bridge._end = now - 0.9, now
+    await bridge.wait_for_evidence(faces, now - 0.08, now, timeout=0.12)
+    assert time.monotonic() - start < 0.05
+    assert bridge.asd_late == 0
+
+
+@pytest.mark.anyio
+async def test_result_completed_after_deadline_is_late(monkeypatch):
+    now = time.time()
+    faces = FaceTrackBuffer()
+    faces.set_asd_stream("current")
+    track = {"track_id": 2, "distance_m": 0.7, "mouth_activity": 0.05}
+    faces.add({"event": "faces", "ts": now, "tracks": [track]})
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    bridge._ready = True
+    bridge._stream_id = "current"
+    bridge._start, bridge._samples = now - 1.2, 19200
+    original = faces.active_speaker
+
+    def publish_during_lookup(*args, **kwargs):
+        time.sleep(0.02)  # the first lookup finishes after the 10 ms deadline
+        scored = dict(track)
+        scored["asd"] = {
+            "stream_id": "current",
+            "t0": now - 0.8,
+            "frame_secs": 0.04,
+            "probabilities": [0.9] * 25,
+        }
+        faces.add({"event": "faces", "ts": now, "tracks": [scored]})
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(faces, "active_speaker", publish_during_lookup)
+    await bridge.wait_for_evidence(faces, now - 0.08, now, timeout=0.01)
+    assert bridge.asd_late == 1
+    assert bridge.last_wait_timed_out is True
+
+
+@pytest.mark.anyio
+async def test_bridge_packetizes_actual_samples_and_stops(monkeypatch):
+    import websockets
+
+    socket = FakeSocket()
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        try:
+            yield socket
+        finally:
+            socket.closed = True
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    clock = iter((1000.04, 1000.12, 1000.20))
+    monkeypatch.setattr(
+        "audio.infrastructure.vision.asd_bridge._now", lambda: next(clock)
+    )
+    faces = FaceTrackBuffer()
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    await bridge.start()
+    await eventually(lambda: bool(socket.sent))
+    start = socket.sent[0]
+    assert start == {
+        "cmd": "asd_audio_start",
+        "version": 2,
+        "session_id": "voice-1",
+        "stream_id": start["stream_id"],
+        "sample_rate": 16000,
+        "channels": 1,
+    }
+    socket.inbound.put_nowait({"event": "person_near"})
+    socket.status(start["stream_id"], "ready")
+    await eventually(lambda: bridge.ready)
+    first = bridge.offer(b"a" * 1280, 16000, 1)
+    bridge.offer(b"b" * 2560, 16000, 1)
+    bridge.offer(b"c" * 1280, 16000, 1)
+    await eventually(lambda: len(socket.sent) == 3)
+    packets = socket.sent[1:]
+    assert [p["cmd"] for p in packets] == ["asd_audio", "asd_audio"]
+    assert [len(base64.b64decode(p["pcm16_b64"])) for p in packets] == [2560, 2560]
+    assert packets[1]["seq"] == packets[0]["seq"] + 1
+    assert packets[1]["t0"] - packets[0]["t0"] == pytest.approx(0.08)
+    assert first.start == pytest.approx(1000.0)
+    assert first.end == pytest.approx(1000.04)
+    assert first.stream_id == start["stream_id"]
+    assert bridge.audio_seconds == pytest.approx(0.16)
+    await bridge.close()
+    assert socket.sent[-1] == {"cmd": "asd_audio_stop", "stream_id": start["stream_id"]}
+    await bridge.close()
+    assert not bridge.ready
+
+
+@pytest.mark.anyio
+async def test_bridge_sample_clock_does_not_drift_at_unix_time(monkeypatch):
+    import websockets
+
+    socket = FakeSocket()
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    base, tick = 1790000000.0, [0]
+    monkeypatch.setattr(
+        "audio.infrastructure.vision.asd_bridge._now", lambda: base + tick[0] * 0.02
+    )
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(socket.sent))
+    socket.status(socket.sent[0]["stream_id"], "ready")
+    await eventually(lambda: bridge.ready)
+    spans = []
+    for i in range(3000):  # 60 s of 20 ms frames
+        tick[0] = i + 1
+        spans.append(bridge.offer(b"\0" * 640, 16000, 1))
+    anchor = spans[0].start
+    assert (
+        max(abs(s.end - (anchor + (i + 1) * 0.02)) for i, s in enumerate(spans)) < 1e-6
+    )
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_disabled_status_ends_attempts_for_session(monkeypatch):
+    import websockets
+
+    sockets = []
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        socket = FakeSocket()
+        sockets.append(socket)
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(sockets and sockets[0].sent))
+    sockets[0].status(sockets[0].sent[0]["stream_id"], "disabled")
+    await asyncio.sleep(0.02)
+    bridge.offer(b"a" * 2560, 16000, 1)
+    assert len(sockets) == 1
+    assert not bridge.ready
+    await bridge.close()
+
+
+@pytest.mark.parametrize("status", ["unavailable"])
+@pytest.mark.anyio
+async def test_other_terminal_statuses_end_attempts(monkeypatch, status):
+    import websockets
+
+    sockets = []
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        socket = FakeSocket()
+        sockets.append(socket)
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(sockets and sockets[0].sent))
+    sockets[0].status(sockets[0].sent[0]["stream_id"], status)
+    await asyncio.sleep(0.02)
+    assert len(sockets) == 1
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_stalled_socket_drops_oldest_packets_without_blocking_offer(monkeypatch):
+    import websockets
+
+    socket = FakeSocket()
+    blocked = asyncio.Event()
+    original_send = socket.send
+
+    async def send(raw):
+        if json.loads(raw)["cmd"] == "asd_audio":
+            await blocked.wait()
+        await original_send(raw)
+
+    socket.send = send
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    times = iter(1000 + i * 0.08 for i in range(20))
+    monkeypatch.setattr(
+        "audio.infrastructure.vision.asd_bridge._now", lambda: next(times)
+    )
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(socket.sent))
+    socket.status(socket.sent[0]["stream_id"], "ready")
+    await eventually(lambda: bridge.ready)
+    for _ in range(12):
+        bridge.offer(b"a" * 2560, 16000, 1)
+    assert len(bridge._queue) <= 8
+    blocked.set()
+    await eventually(lambda: len(socket.sent) >= 9)
+    seqs = [p["seq"] for p in socket.sent if p["cmd"] == "asd_audio"]
+    assert max(seqs) == 11
+    assert len(seqs) < 12
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_clock_discontinuity_starts_new_stream(monkeypatch):
+    import websockets
+
+    sockets = []
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        socket = FakeSocket()
+        sockets.append(socket)
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    times = iter((1000.04, 1001.04, 1001.12))
+    monkeypatch.setattr(
+        "audio.infrastructure.vision.asd_bridge._now", lambda: next(times)
+    )
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(sockets and sockets[0].sent))
+    first_id = sockets[0].sent[0]["stream_id"]
+    sockets[0].status(first_id, "ready")
+    await eventually(lambda: bridge.ready)
+    bridge.offer(b"x" * 1280, 16000, 1)  # half packet
+    span = bridge.offer(b"y" * 1280, 16000, 1)
+    assert span.stream_id is None
+    await eventually(lambda: len(sockets) == 2 and bool(sockets[1].sent))
+    second_id = sockets[1].sent[0]["stream_id"]
+    assert second_id != first_id
+    sockets[1].status(second_id, "ready")
+    await eventually(lambda: bridge.ready)
+    bridge.offer(b"z" * 2560, 16000, 1)
+    await eventually(lambda: len(sockets[1].sent) == 2)
+    assert base64.b64decode(sockets[1].sent[1]["pcm16_b64"]) == b"z" * 2560
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_bad_audio_format_skips_bridge_but_preserves_faces(monkeypatch):
+    import websockets
+
+    socket = FakeSocket()
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    faces = FaceTrackBuffer()
+    faces.add(
+        {
+            "event": "faces",
+            "ts": 100.0,
+            "tracks": [
+                {
+                    "track_id": 1,
+                    "distance_m": 0.5,
+                    "mouth_activity": 0.9,
+                    "asd": {"stream_id": "old", "probabilities": [0.9] * 25},
+                }
+            ],
+        }
+    )
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    await bridge.start()
+    await eventually(lambda: bool(socket.sent))
+    socket.status(socket.sent[0]["stream_id"], "ready")
+    await eventually(lambda: bridge.ready)
+    bridge.offer(b"a" * 2560, 48000, 1)
+    bridge.offer(b"a" * 2560, 16000, 2)
+    bridge.offer(b"a" * 2559, 16000, 1)
+    await asyncio.sleep(0)
+    assert socket.sent == [socket.sent[0]]
+    assert bridge.audio_seconds == 0
+    assert faces.anchor(100.0, 1.0) == 1
+    assert faces.mouth(1, 99.9, 100.1) == pytest.approx(0.9)
+    assert "asd" not in faces._events[0]["tracks"][0]
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_busy_reconnect_uses_new_id_and_only_new_pcm(monkeypatch):
+    import websockets
+
+    from audio.infrastructure.vision import asd_bridge as speaker_vision
+
+    sockets = []
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        socket = FakeSocket()
+        sockets.append(socket)
+        yield socket
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    monkeypatch.setattr(speaker_vision, "RECONNECT_DELAYS", (0,))
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(sockets and sockets[0].sent))
+    old_id = sockets[0].sent[0]["stream_id"]
+    sockets[0].status(old_id, "busy")
+    await eventually(lambda: len(sockets) == 2 and bool(sockets[1].sent))
+    new_id = sockets[1].sent[0]["stream_id"]
+    assert new_id != old_id
+    sockets[1].status(new_id, "ready")
+    await eventually(lambda: bridge.ready)
+    bridge._finish(old_id)  # a late callback for the closed socket
+    assert bridge.stream_id == new_id
+    bridge.offer(b"n" * 2560, 16000, 1)
+    await eventually(lambda: len(sockets[1].sent) == 2)
+    assert base64.b64decode(sockets[1].sent[1]["pcm16_b64"]) == b"n" * 2560
+    await bridge.close()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "vision_asd = true\n",
+        "vision_asd = true\nenabled = true\nvision_faces = true\n",
+        "asd_accept_prob = 0.2\nasd_reject_prob = 0.3\n",
+        "asd_accept_prob = inf\n",
+        "asd_wait_secs = 0.13\n",
+        (
+            "vision_asd = true\nenabled = true\nvision_faces = true\n"
+            'diarizer = "sortformer"\nstt_mask = true\nstt_mask_delay_secs = 0.6\n'
+        ),
+        (
+            "vision_asd = true\nenabled = true\nvision_faces = true\n"
+            'diarizer = "sortformer"\nstt_mask = true\nstt_mask_delay_secs = nan\n'
+        ),
+    ],
+)
+def test_invalid_asd_settings_fail_at_load(tmp_path, monkeypatch, body):
+    preset = tmp_path / "preset.toml"
+    preset.write_text("[voice.speaker]\n" + body)
+    with pytest.raises(ValueError, match="voice_speaker_"):
+        load_speaker_settings(preset)
+
+
+def _sequenced_connect(monkeypatch, sockets):
+    import websockets
+
+    opened = []
+
+    @asynccontextmanager
+    async def connect(*args, **kwargs):
+        socket = sockets[len(opened)]
+        opened.append(socket)
+        try:
+            yield socket
+        finally:
+            socket.closed = True
+
+    monkeypatch.setattr(websockets, "connect", connect)
+    monkeypatch.setattr(
+        "audio.infrastructure.vision.asd_bridge.RECONNECT_DELAYS", (0.01,)
+    )
+    return opened
+
+
+@pytest.mark.anyio
+async def test_old_vision_answering_invalid_to_v2_gets_v1_at_once(monkeypatch):
+    sockets = [FakeSocket(), FakeSocket()]
+    _sequenced_connect(monkeypatch, sockets)
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(sockets[0].sent))
+    first = sockets[0].sent[0]
+    assert first["version"] == 2
+    sockets[0].status(first["stream_id"], "invalid")
+    await eventually(lambda: bool(sockets[1].sent))
+    second = sockets[1].sent[0]
+    assert second["version"] == 1
+    sockets[1].status(second["stream_id"], "ready")
+    await eventually(lambda: bridge.ready)
+    assert bridge.protocol_version == 1
+    bridge.pin(7)
+    await asyncio.sleep(0.05)
+    assert all(m["cmd"] != "asd_track" for m in sockets[1].sent)
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_invalid_after_the_v1_fallback_ends_attempts(monkeypatch):
+    sockets = [FakeSocket(), FakeSocket(), FakeSocket()]
+    opened = _sequenced_connect(monkeypatch, sockets)
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    await bridge.start()
+    await eventually(lambda: bool(sockets[0].sent))
+    sockets[0].status(sockets[0].sent[0]["stream_id"], "invalid")
+    await eventually(lambda: bool(sockets[1].sent))
+    sockets[1].status(sockets[1].sent[0]["stream_id"], "invalid")
+    await asyncio.sleep(0.05)
+    assert len(opened) == 2
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_pin_is_sent_on_v2_and_resent_after_reconnect(monkeypatch):
+    sockets = [FakeSocket(), FakeSocket()]
+    _sequenced_connect(monkeypatch, sockets)
+    bridge = VisionAudioBridge("ws://vision", "voice-1", FaceTrackBuffer())
+    bridge.pin(7)  # before ready: remembered
+    await bridge.start()
+    await eventually(lambda: bool(sockets[0].sent))
+    sockets[0].status(sockets[0].sent[0]["stream_id"], "ready")
+    await eventually(lambda: any(m["cmd"] == "asd_track" for m in sockets[0].sent))
+    pin = next(m for m in sockets[0].sent if m["cmd"] == "asd_track")
+    assert pin == {
+        "cmd": "asd_track",
+        "stream_id": sockets[0].sent[0]["stream_id"],
+        "track_id": 7,
+    }
+
+    sockets[0].inbound.put_nowait(None)  # Vision restarts
+    await eventually(lambda: bool(sockets[1].sent))
+    sockets[1].status(sockets[1].sent[0]["stream_id"], "ready")
+    await eventually(lambda: any(m["cmd"] == "asd_track" for m in sockets[1].sent))
+
+    bridge.pin(None)
+    await eventually(
+        lambda: (
+            [m.get("track_id", 0) for m in sockets[1].sent if m["cmd"] == "asd_track"][
+                -1
+            ]
+            is None
+        )
+    )
+    await bridge.close()
+
+
+@pytest.mark.anyio
+async def test_pushed_asd_reaches_the_face_buffer_and_is_aged(monkeypatch):
+    sockets = [FakeSocket()]
+    _sequenced_connect(monkeypatch, sockets)
+    faces = FaceTrackBuffer()
+    bridge = VisionAudioBridge("ws://vision", "voice-1", faces)
+    await bridge.start()
+    await eventually(lambda: bool(sockets[0].sent))
+    stream_id = sockets[0].sent[0]["stream_id"]
+    sockets[0].status(stream_id, "ready")
+    await eventually(lambda: bridge.ready)
+    now = time.time()
+    window = {
+        "event": "asd",
+        "stream_id": stream_id,
+        "track_id": 7,
+        "t0": now - 1.0,
+        "frame_secs": 0.04,
+        "probabilities": [0.9] * 25,
+    }
+    sockets[0].inbound.put_nowait(dict(window, stream_id="stale"))
+    sockets[0].inbound.put_nowait(window)
+    await eventually(
+        lambda: (
+            faces.active_speaker(
+                7, now - 0.1, now - 0.02, stream_id=stream_id, now=time.time()
+            )
+            is not None
+        )
+    )
+    assert len(bridge.asd_age_ms) == 1 and bridge.asd_age_ms[0] >= 0
+    await bridge.close()

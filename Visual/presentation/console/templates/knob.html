@@ -1,0 +1,5 @@
+<div class="tuning-knob" data-scope="{{ 'voice' if key in ['approach_threshold_m', 'anchor_max_m', 'mouth_active', 'asd_accept_prob', 'asd_reject_prob', 'voice_match', 'voice_reject', 'bot_match'] else 'vision' }}">
+  <div class="knob-heading"><label for="k-{{ id }}">{{ label }}</label><output id="o-{{ id }}" for="k-{{ id }}">--</output></div>
+  <input type="range" id="k-{{ id }}" data-key="{{ key }}" data-unit="{{ unit }}" min="{{ lo }}" max="{{ hi }}" step="{{ step }}" value="{{ lo }}" aria-describedby="hint-{{ id }}" disabled>
+  <div class="ends"><span>{{ lo }}{{ unit }}</span><span>{{ hi }}{{ unit }}</span></div><p class="helper" id="hint-{{ id }}">{{ hint }}</p>
+</div>

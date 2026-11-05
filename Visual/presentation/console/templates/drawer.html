@@ -1,0 +1,30 @@
+<dialog class="tuning-drawer" id="tuning-drawer" aria-labelledby="tuning-title">
+  <form method="dialog" class="drawer-heading"><div><p class="eyebrow">Operator controls</p><h2 id="tuning-title">Live tuning</h2></div><button class="icon-button" aria-label="Close live tuning">×</button></form>
+  <p class="helper drawer-intro">Changes apply live after confirmation. Save writes the active configuration files.</p>
+  <div id="tuning-controls">
+    <fieldset><legend>Visual & proximity</legend>
+      {% for id, label, key, lo, hi, step, unit, hint in [
+        ('ipd', 'Face IPD', 'face_ipd_m', 0.04, 0.09, 0.001, 'm', 'Scales face distance for a known interpupillary distance.'),
+        ('thr', 'Proximity alert threshold', 'distance_threshold', 0.1, 6, 0.05, 'm', 'Distance alert in this console. Kiosk activation is configured separately.'),
+        ('offset', 'Audio / video offset', 'asd_audio_offset_secs', -1, 1, 0.01, 's', 'Aligns face crops with the incoming audio.')
+      ] %}
+      {% include "templates/knob.html" %}
+      {% endfor %}
+    </fieldset>
+    <fieldset id="voice-knobs" disabled><legend>Target speaker & fusion</legend><p class="helper" id="voice-tuning-note">Available during a kiosk voice session.</p>
+      {% for id, label, key, lo, hi, step, unit, hint in [
+        ('approach', 'Kiosk activation distance', 'approach_threshold_m', 0.1, 6, 0.05, 'm', 'Distance at which the kiosk engages a customer.'),
+        ('anchor', 'Target acquisition distance', 'anchor_max_m', 0.1, 6, 0.05, 'm', 'Maximum distance for acquiring a speaking customer.'),
+        ('mouth', 'Mouth activity threshold', 'mouth_active', 0.01, 1, 0.01, '', 'Minimum lip activity for visual speech evidence.'),
+        ('asd-accept', 'ASD acceptance threshold', 'asd_accept_prob', 0.01, 1, 0.01, '', 'Minimum audio and face probability for acceptance.'),
+        ('asd-reject', 'ASD rejection threshold', 'asd_reject_prob', 0, 0.99, 0.01, '', 'Must stay below the ASD acceptance threshold.'),
+        ('voice-match', 'Voiceprint matching threshold', 'voice_match', 0.01, 1, 0.01, '', 'Minimum similarity to confirm the customer’s voice.'),
+        ('voice-reject', 'Voiceprint rejection threshold', 'voice_reject', 0.01, 0.99, 0.01, '', 'Must stay below the voiceprint matching threshold.'),
+        ('bot-match', 'Bot echo matching threshold', 'bot_match', 0.01, 1, 0.01, '', 'Minimum similarity for identifying the bot’s own voice.')
+      ] %}
+      {% include "templates/knob.html" %}
+      {% endfor %}
+    </fieldset>
+  </div>
+  <div class="drawer-footer"><p id="tuning-feedback" role="status" aria-live="polite">Waiting for connection.</p><button class="button primary" id="save-settings" disabled>Save settings</button></div>
+</dialog>

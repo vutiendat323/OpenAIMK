@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE / editor local state
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local-only Claude Code permissions
+.claude/settings.local.json
+
+# Camera calibration captures — regenerable by pointing the camera at a
+# chessboard, and may contain identifiable people. Keep them out of git.
+tools/chessboard/captures/

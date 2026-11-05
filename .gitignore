@@ -9,11 +9,8 @@ dist/
 
 # Local environments, models and large artifacts
 node_modules/
-Audio/
-Visual/
-Metric3D/
-output/
-data/
+/output/
+/data/
 .codex/
 .agents/
 *.db

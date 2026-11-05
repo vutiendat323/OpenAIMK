@@ -1,0 +1,150 @@
+<!-- Generated compatibility page. Source: templates/dashboard.html. -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>METEK · Kiosk Mission Control</title>
+  <link rel="icon" type="image/png" href="/img/metek-mark.png">
+  <link rel="stylesheet" href="/css/console.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to monitoring</a>
+  <div class="app">
+    <header class="titlebar"><img class="logo" src="/img/metek-wordmark.png" alt="METEK"><span class="header-divider"></span><span class="header-caption">AI OPERATIONS</span><div class="language-switch" role="group" aria-label="Interface language"><button type="button" data-language="vi" lang="vi" aria-label="Tiếng Việt" aria-pressed="false">VI</button><button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="true">EN</button></div><span class="conn"><span class="dot off" id="conn-dot"></span><span id="conn-text">Connecting</span></span></header>
+
+<main class="cockpit" id="main-content">
+  <div class="workspace-heading">
+    <div><p class="eyebrow">Kiosk operations</p><h1>Mission Control</h1></div>
+    <div class="heading-actions"><span class="device"><span class="dot off" id="camera-dot"></span><span id="camera">Camera</span></span><button class="button secondary" id="open-tuning" aria-controls="tuning-drawer" aria-expanded="false">Live tuning <span aria-hidden="true">↗</span></button></div>
+  </div>
+  <div class="cockpit-grid">
+    <section class="visual-column" aria-label="Visual monitoring">
+      <div class="section-heading"><h2>Live vision</h2><span class="micro-label">Camera feed + tracking</span></div>
+<div class="preview">
+  <canvas id="feed" width="1280" height="960" aria-label="Live camera with face distance and target tracking overlays"></canvas>
+  <div class="overlay" aria-label="Pipeline statistics"><span>Frame rate</span><span id="m-fps">--</span><span>Track latency</span><span id="m-track">--</span><span>Spoof latency</span><span id="m-spoof">--</span></div>
+  <div class="feedstate"><span class="dot off" id="feed-dot"></span><span id="feed-state">Waiting</span></div>
+  <div class="target-tag" id="target-tag" hidden>Target locked</div>
+</div>
+      <section class="audio-panel" aria-labelledby="audio-heading">
+  <div class="section-heading"><h2 id="audio-heading">Audio monitor</h2><span class="micro-label" id="audio-status">Awaiting microphone</span></div>
+  <div class="audio-layout"><div class="waveform"><canvas id="waveform" width="1000" height="140" aria-label="Incoming microphone waveform"></canvas><div class="wave-axis"><span>MIC INPUT · AFTER ENHANCEMENT</span><span id="sample-rate">16 kHz · mono</span></div></div>
+    <div class="audio-readings"><div class="reading"><span>Input level</span><strong id="audio-db"><span id="audio-db-value">--</span><small>dBFS</small></strong></div><meter id="audio-meter" min="-96" max="0" value="-96" aria-label="Microphone energy in dBFS"></meter>
+      <div class="mini-row"><span>Raw level</span><b id="raw-db">--</b></div><div class="mini-row"><span>Noise reduction</span><b id="noise-status">Waiting</b></div><div class="mini-row"><span>STT audio gate</span><b id="mask-status">Waiting</b></div>
+      <div class="mini-row"><span>Listen to target audio</span><button id="target-audio-toggle" class="target-audio-toggle" type="button" role="switch" aria-checked="false" aria-label="Listen to target audio on the OpenJarvis machine" aria-describedby="target-audio-note" disabled>OFF</button></div>
+      <div id="target-audio-note" class="monitor-note" aria-live="polite">Available during a kiosk voice session.</div></div>
+  </div>
+</section>
+      <div class="below">
+        <div class="chart"><div class="label">Proximity · last 12 seconds</div><canvas id="spark" width="1000" height="200" aria-label="Filtered and raw face distance history"></canvas>
+          <div class="legend"><span><i></i>Filtered</span><span><i class="raw"></i>Raw</span><span><i class="thr"></i>Alert threshold</span></div></div>
+        <div><div class="label">Landmark gate</div><div class="meter" id="gate"></div><div class="gate-note"><b id="gate-pct">--</b> of recent frames accepted</div></div>
+      </div>
+    </section>
+    <aside class="intelligence-column" aria-label="AI decisions">
+      <section class="decision-panel" aria-labelledby="decision-heading">
+  <div class="section-heading"><h2 id="decision-heading">AV fusion decision</h2><span class="micro-label" id="identity-mode">Awaiting session</span></div>
+  <div class="verdict" id="verdict" data-state="idle" role="status" aria-live="polite"><span class="verdict-lamp" aria-hidden="true"></span><div><strong id="verdict-label">STANDBY</strong><p id="verdict-reason">Start a voice session on the kiosk.</p></div></div>
+  <div class="decision-details"><div class="mini-row"><span>Customer lock</span><b id="lock-state">--</b></div><div class="mini-row"><span>Target face</span><b id="lock-target">--</b></div><div class="mini-row"><span>Evidence</span><b id="evidence-source">--</b></div><div class="mini-row"><span>Voiceprint</span><b id="voiceprint-status">--</b></div><div class="mini-row"><span>Voice match</span><b id="voice-similarity">--</b></div><div class="mini-row"><span>Overlap / extraction</span><b id="overlap-status">--</b></div></div>
+  <div class="asd-panel"><div class="section-heading"><h3>Active speaker detection</h3><strong id="asd-score">--</strong></div><meter id="asd-meter" min="0" max="1" value="0" aria-label="Audio and face active speaker probability"></meter><p id="asd-note" class="helper">Waiting for synchronized audio and video.</p><div class="mini-row"><span>Mouth activity</span><b id="mouth-score">--</b></div></div>
+  <div class="diagnostics"><div><span>ASD use</span><b id="asd-use">--</b></div><div><span>Late windows</span><b id="asd-late">--</b></div><div><span>Masked / no verdict</span><b id="masked-count">--</b></div><div><span>Blocked barge-ins</span><b id="bargein-count">--</b></div></div>
+  <details class="decision-history"><summary>Decision timeline</summary><ol id="decision-log"><li class="helper">No decisions yet.</li></ol></details>
+</section>
+      <section class="proximity-panel" aria-labelledby="proximity-heading">
+        <div class="section-heading"><h2 id="proximity-heading">Visual & proximity</h2><span class="micro-label">Nearest face</span></div>
+        <div class="metric"><div class="name"><b id="t-name">No target</b><span class="state" id="t-state">No face</span></div><div class="num" id="t-dist">--<small>m</small></div></div>
+        <div class="fx"><span class="t">Liveness</span><span class="v" id="t-live">--</span></div>
+        <div class="fx"><span class="t">Raw distance</span><span class="s">Before smoothing</span><span class="v" id="t-raw">--</span></div>
+        <div class="fx"><span class="t">Body presence</span><span class="s">YOLO + Metric3D</span><span class="v" id="t-body">--</span></div>
+        <div class="section-heading other-heading"><h3>Other faces</h3><span class="micro-label" id="face-count">0 tracked</span></div><div id="faces"></div>
+      </section>
+    </aside>
+  </div>
+  <footer class="workspace-footer"><span><span class="dot off" id="voice-dot"></span><span id="voice-connection">Waiting for a kiosk voice session</span></span><span id="last-update">No telemetry yet</span></footer>
+</main>
+<dialog class="tuning-drawer" id="tuning-drawer" aria-labelledby="tuning-title">
+  <form method="dialog" class="drawer-heading"><div><p class="eyebrow">Operator controls</p><h2 id="tuning-title">Live tuning</h2></div><button class="icon-button" aria-label="Close live tuning">×</button></form>
+  <p class="helper drawer-intro">Changes apply live after confirmation. Save writes the active configuration files.</p>
+  <div id="tuning-controls">
+    <fieldset><legend>Visual & proximity</legend>
+
+      <div class="tuning-knob" data-scope="vision">
+  <div class="knob-heading"><label for="k-ipd">Face IPD</label><output id="o-ipd" for="k-ipd">--</output></div>
+  <input type="range" id="k-ipd" data-key="face_ipd_m" data-unit="m" min="0.04" max="0.09" step="0.001" value="0.04" aria-describedby="hint-ipd" disabled>
+  <div class="ends"><span>0.04m</span><span>0.09m</span></div><p class="helper" id="hint-ipd">Scales face distance for a known interpupillary distance.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="vision">
+  <div class="knob-heading"><label for="k-thr">Proximity alert threshold</label><output id="o-thr" for="k-thr">--</output></div>
+  <input type="range" id="k-thr" data-key="distance_threshold" data-unit="m" min="0.1" max="6" step="0.05" value="0.1" aria-describedby="hint-thr" disabled>
+  <div class="ends"><span>0.1m</span><span>6m</span></div><p class="helper" id="hint-thr">Distance alert in this console. Kiosk activation is configured separately.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="vision">
+  <div class="knob-heading"><label for="k-offset">Audio / video offset</label><output id="o-offset" for="k-offset">--</output></div>
+  <input type="range" id="k-offset" data-key="asd_audio_offset_secs" data-unit="s" min="-1" max="1" step="0.01" value="-1" aria-describedby="hint-offset" disabled>
+  <div class="ends"><span>-1s</span><span>1s</span></div><p class="helper" id="hint-offset">Aligns face crops with the incoming audio.</p>
+</div>
+
+    </fieldset>
+    <fieldset id="voice-knobs" disabled><legend>Target speaker & fusion</legend><p class="helper" id="voice-tuning-note">Available during a kiosk voice session.</p>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-approach">Kiosk activation distance</label><output id="o-approach" for="k-approach">--</output></div>
+  <input type="range" id="k-approach" data-key="approach_threshold_m" data-unit="m" min="0.1" max="6" step="0.05" value="0.1" aria-describedby="hint-approach" disabled>
+  <div class="ends"><span>0.1m</span><span>6m</span></div><p class="helper" id="hint-approach">Distance at which the kiosk engages a customer.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-anchor">Target acquisition distance</label><output id="o-anchor" for="k-anchor">--</output></div>
+  <input type="range" id="k-anchor" data-key="anchor_max_m" data-unit="m" min="0.1" max="6" step="0.05" value="0.1" aria-describedby="hint-anchor" disabled>
+  <div class="ends"><span>0.1m</span><span>6m</span></div><p class="helper" id="hint-anchor">Maximum distance for acquiring a speaking customer.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-mouth">Mouth activity threshold</label><output id="o-mouth" for="k-mouth">--</output></div>
+  <input type="range" id="k-mouth" data-key="mouth_active" data-unit="" min="0.01" max="1" step="0.01" value="0.01" aria-describedby="hint-mouth" disabled>
+  <div class="ends"><span>0.01</span><span>1</span></div><p class="helper" id="hint-mouth">Minimum lip activity for visual speech evidence.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-asd-accept">ASD acceptance threshold</label><output id="o-asd-accept" for="k-asd-accept">--</output></div>
+  <input type="range" id="k-asd-accept" data-key="asd_accept_prob" data-unit="" min="0.01" max="1" step="0.01" value="0.01" aria-describedby="hint-asd-accept" disabled>
+  <div class="ends"><span>0.01</span><span>1</span></div><p class="helper" id="hint-asd-accept">Minimum audio and face probability for acceptance.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-asd-reject">ASD rejection threshold</label><output id="o-asd-reject" for="k-asd-reject">--</output></div>
+  <input type="range" id="k-asd-reject" data-key="asd_reject_prob" data-unit="" min="0" max="0.99" step="0.01" value="0" aria-describedby="hint-asd-reject" disabled>
+  <div class="ends"><span>0</span><span>0.99</span></div><p class="helper" id="hint-asd-reject">Must stay below the ASD acceptance threshold.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-voice-match">Voiceprint matching threshold</label><output id="o-voice-match" for="k-voice-match">--</output></div>
+  <input type="range" id="k-voice-match" data-key="voice_match" data-unit="" min="0.01" max="1" step="0.01" value="0.01" aria-describedby="hint-voice-match" disabled>
+  <div class="ends"><span>0.01</span><span>1</span></div><p class="helper" id="hint-voice-match">Minimum similarity to confirm the customer’s voice.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-voice-reject">Voiceprint rejection threshold</label><output id="o-voice-reject" for="k-voice-reject">--</output></div>
+  <input type="range" id="k-voice-reject" data-key="voice_reject" data-unit="" min="0.01" max="0.99" step="0.01" value="0.01" aria-describedby="hint-voice-reject" disabled>
+  <div class="ends"><span>0.01</span><span>0.99</span></div><p class="helper" id="hint-voice-reject">Must stay below the voiceprint matching threshold.</p>
+</div>
+
+      <div class="tuning-knob" data-scope="voice">
+  <div class="knob-heading"><label for="k-bot-match">Bot echo matching threshold</label><output id="o-bot-match" for="k-bot-match">--</output></div>
+  <input type="range" id="k-bot-match" data-key="bot_match" data-unit="" min="0.01" max="1" step="0.01" value="0.01" aria-describedby="hint-bot-match" disabled>
+  <div class="ends"><span>0.01</span><span>1</span></div><p class="helper" id="hint-bot-match">Minimum similarity for identifying the bot’s own voice.</p>
+</div>
+
+    </fieldset>
+  </div>
+  <div class="drawer-footer"><p id="tuning-feedback" role="status" aria-live="polite">Waiting for connection.</p><button class="button primary" id="save-settings" disabled>Save settings</button></div>
+</dialog>
+
+  </div>
+  <script src="/js/i18n.js" defer></script>
+  <script src="/js/console.js" defer></script>
+  <script src="/js/mission.js" defer></script>
+</body>
+</html>

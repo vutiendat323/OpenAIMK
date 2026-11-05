@@ -1,0 +1,27 @@
+# Core
+torch>=2.0
+torchvision>=0.15        # pulled in by ultralytics; listed so it comes from the same CUDA build as torch
+numpy>=1.23
+
+# Face Detection + ReID embedder (SCRFD, ONNX)
+onnxruntime-gpu>=1.18
+
+# Tracking (ByteTrack: Kalman from filterpy, Hungarian matching from scipy)
+filterpy>=1.4
+scipy>=1.10
+
+# Depth Estimation (Metric3Dv2). Metric3D itself is not a pip package: it is
+# the sibling checkout ../Metric3D, put on sys.path by core/depth/estimator.py.
+mmengine>=0.10
+timm>=1.0
+
+# Person detection (presence without a face)
+ultralytics>=8.3         # YOLO11n
+
+# Camera, geometry (solvePnP), JPEG encoding
+opencv-python>=4.8
+
+# Service: WebSocket + HTTP for the kiosk and the console, YAML config
+websockets>=14.0         # the asyncio API with process_request(connection, request)
+PyYAML>=6.0
+Jinja2>=3.1,<4          # modular operator console templates
