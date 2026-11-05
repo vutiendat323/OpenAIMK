@@ -27,7 +27,8 @@ A ready QR should produce only “Bạn quét QR trên màn hình để thanh to
 - Pending QR-ready replies now take precedence over general response-length
   guidance: exactly the short QR instruction, without order recap or confirmation.
   Merchant-verified paid status instead gets “Đơn đã được thanh toán.”, without
-  another payment/order. Payment-status questions refresh through `kiosk_payment`;
+  another payment/order. (Superseded 2026-11-05: the paid reply is now worded
+  naturally by Trend, not this fixed sentence; see PROGRESS.md.) Payment-status questions refresh through `kiosk_payment`;
   cached progress alone is not a fresh payment check.
 - Native voice stays within Trend Coffee and delegates uncertain drink wording
   instead of treating it as an apartment-search conversation. Fulfillment and

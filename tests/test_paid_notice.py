@@ -66,7 +66,8 @@ def test_the_summary_carries_the_order_context():
     for part in ("2 × Cà phê sữa (ít)", "ít đường", "60000 VND", "tại bàn Bàn 5", "TC-42"):
         assert part in summary
     text = paid_turn(order)
-    assert "kiosk_payment" in text and "'Đơn đã được thanh toán.'" in text
+    assert "kiosk_payment" in text and "own words" in text
+    assert "Đơn đã được thanh toán" not in text, "no fixed paid sentence"
     assert "Do not create another order" in text
 
 
@@ -79,7 +80,7 @@ def test_a_payment_found_by_the_screen_is_told_to_trend_with_the_order(svc):
         ((thread, text),) = host.codex.turns
         assert thread == host.thread_id
         assert "Cà phê sữa" in text and "60000 VND" in text and "mang đi" in text
-        assert "'Đơn đã được thanh toán.'" in text
+        assert "If it reports paid" in text and "own words" in text
         assert any(e["type"] == "view" and e.get("view") == "payment" for e in events)
         assert host.audio_metrics["paid_notices"] == 1
         await merchant_pays(svc, order)

@@ -101,8 +101,13 @@ def spoken_items(text, catalog, limit=SPOKEN_ITEMS_LIMIT):
     return [ident for _, _, ident in sorted(kept)][:limit]
 
 
-# "Paid" is a locked sentence: only a tool result that says paid may back it.
-PAID = re.compile(r"đã được thanh toán|đã thanh toán (xong|thành công)", re.IGNORECASE)
+# Trend words a paid result freely, but only a tool result that says paid may back it.
+PAID = re.compile(
+    r"đã được thanh toán|đã thanh toán (xong|thành công|rồi)"
+    r"|thanh toán (đã )?(xong|thành công) rồi|thanh toán thành công"
+    r"|đã nhận (được )?(tiền|thanh toán)",
+    re.IGNORECASE,
+)
 UNVERIFIED_PAID_NOTE = (
     "Kiosk check: this order is not verified as paid by any tool result. Never say it was "
     "paid. If the guest asked about payment, call kiosk_payment and relay its actual status; "
@@ -173,9 +178,11 @@ def paid_turn(order):
     return (
         "Kiosk notice, not a guest message: the merchant has just verified payment for this "
         f"guest's order ({paid_summary(order)}). Call kiosk_payment once to confirm its real "
-        "status. If it reports paid, tell the guest only: 'Đơn đã được thanh toán.' Otherwise "
-        "relay its real status as the service instructions say. Do not create another order or "
-        "payment. Keep this paid order in mind for the guest's next questions."
+        "status. If it reports paid, tell the guest warmly, in your own words and one or two "
+        "short sentences, that the payment went through; you may mention this order (at most "
+        "two drink names, takeaway or table). Otherwise relay its real status as the service "
+        "instructions say. Do not create another order or payment. Keep this paid order in "
+        "mind for the guest's next questions."
     )
 
 

@@ -183,8 +183,9 @@ flowchart TD
    - For orders: Directly calls `kiosk_cart` and `kiosk_checkout` without asking for repeated confirmations.
 4. **Final Spoken Policy**: When `qr_available=true`, the model's entire final sentence is strictly:  
    `"Bạn quét QR trên màn hình để thanh toán nhé."`  
-   Once payment is verified, the spoken response is strictly:  
-   `"Đơn đã được thanh toán."`
+   Once payment is verified, Trend tells the guest in its own words (1–2 friendly sentences,
+   may mention the order). Since 2026-11-05 this is no longer the fixed sentence
+   `"Đơn đã được thanh toán."`; see `docs/PROGRESS.md`.
 5. **Playout (Pet Mode)**: `trendcoffee/speaker.py` holds native audio for ~500 ms in a steady-clock playout buffer, sending contiguous 20 ms frames over WebRTC to `speakerRtc.ts` to prevent browser NetEQ distortion.
 
 ---
