@@ -19,6 +19,7 @@ import { PaymentQr } from './components/PaymentQr'
 import { AvatarAssistant } from './components/AvatarAssistant'
 import { SettingsDialog } from './components/SettingsDialog'
 import { VirtualKeyboard } from './components/VirtualKeyboard'
+import { isSettingsShortcut, saveSettingsVisible, storedSettingsVisible } from './settingsShortcut'
 import { usePreferences } from './usePreferences'
 import { initialNavigation, navigationReducer } from './navigation'
 import type { NavigationAction } from './navigation'
@@ -109,6 +110,18 @@ export default function App() {
     sidebar.current?.focus({ preventScroll: true })
     return () => window.removeEventListener('keydown', onKey)
   }, [navigation.open, navigation.view])
+  const [settingsVisible, setSettingsVisible] = useState(() => storedSettingsVisible())
+  useEffect(() => {
+    // Staff shortcut: hide the Settings button from guests, or show it again.
+    const onKey = (event: KeyboardEvent) => {
+      if (!isSettingsShortcut(event)) return
+      event.preventDefault()
+      setSettingsVisible((visible) => !visible)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  useEffect(() => saveSettingsVisible(settingsVisible), [settingsVisible])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<Order | null>(null)
   const [error, setError] = useState('')
@@ -543,7 +556,7 @@ export default function App() {
             />
           </a>
           <div className="header-actions">
-            <SettingsDialog voice={voice} />
+            {settingsVisible && <SettingsDialog voice={voice} />}
             <Button
               variant="ghost"
               className="navigation-toggle header-cart"
