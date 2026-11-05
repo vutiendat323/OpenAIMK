@@ -106,10 +106,26 @@ def boundary_speech(kind, voice=None):
     return {"text": BOUNDARY_TEXT[kind], "voice": voice, "audio": audio}
 
 
+# After an idle/time-limit/next-guest end, the same guest is not greeted again at once; if
+# they are still standing at the kiosk after this long, a new session opens for them
+# (user decision 2026-11-05: a guest who stays must not need to leave the camera first).
+BLOCK_SECONDS = 10.0
+
+
 class PresencePolicy:
-    def __init__(self, *, threshold=0.6, enter_seconds=2.0, leave_seconds=3.0, freshness=1.5):
+    def __init__(
+        self,
+        *,
+        threshold=0.6,
+        enter_seconds=2.0,
+        leave_seconds=3.0,
+        freshness=1.5,
+        block_seconds=BLOCK_SECONDS,
+    ):
         self.threshold, self.enter_seconds = threshold, enter_seconds
         self.leave_seconds, self.freshness = leave_seconds, freshness
+        self.block_seconds = block_seconds
+        self.blocked_since = None
         self.active = False
         self.track_id = None
         self.candidate = None
@@ -118,8 +134,32 @@ class PresencePolicy:
         self.last_received = None
         self.last_seq = -1
         self.blocked_track = None
+        self.reasons = {}
+        self.last = None
+
+    def _why(self, reason, **values):
+        """Numbers only: why the last camera event did or did not open a session."""
+        self.reasons[reason] = self.reasons.get(reason, 0) + 1
+        self.last = {"reason": reason, **values}
+
+    def diagnostics(self):
+        return {
+            "last": self.last,
+            "reasons": dict(self.reasons),
+            "active": self.active,
+            "track_id": self.track_id,
+            "blocked_track": self.blocked_track,
+            "threshold_m": self.threshold,
+            "enter_seconds": self.enter_seconds,
+        }
 
     def observe(self, event, now, wall, *, authorized=False):
+        result = self._observe(event, now, wall, authorized=authorized)
+        if result == "enter":
+            self._why("enter", track=self.track_id)
+        return result
+
+    def _observe(self, event, now, wall, *, authorized=False):
         seq, captured = event.get("frame_seq"), event.get("captured_at")
         if (
             type(seq) is not int
@@ -128,6 +168,8 @@ class PresencePolicy:
             or not math.isfinite(captured)
             or not -0.5 <= wall - captured <= self.freshness
         ):
+            age = wall - captured if type(captured) in (int, float) else None
+            self._why("stale", age_s=round(age, 2) if age is not None else None)
             return self.tick(now)
         if self.last_received is not None and now - self.last_received > self.freshness:
             self.since = None
@@ -140,6 +182,13 @@ class PresencePolicy:
             and math.isfinite(distance)
             and 0 < distance < self.threshold
             and type(track) is int
+        )
+        self._why(
+            "near" if near else "far",
+            event=str(event.get("event"))[:24],
+            distance_m=round(distance, 2) if type(distance) in (int, float) else None,
+            track=track if type(track) is int else None,
+            age_s=round(wall - captured, 2),
         )
         if self.active:
             owner = next(
@@ -165,7 +214,13 @@ class PresencePolicy:
             return None
         self.absent_since = None
         if track == self.blocked_track and not authorized:
-            return None
+            if self.blocked_since is None:
+                self.blocked_since = now
+            wait = self.block_seconds - (now - self.blocked_since)
+            if wait > 1e-6:
+                self._why("blocked_same_guest", track=track, wait_s=round(wait, 1))
+                return None
+            self.blocked_track = self.blocked_since = None  # still here: welcome them again
         if authorized:
             self.blocked_track = None
         if track != self.candidate or self.since is None:
@@ -194,7 +249,7 @@ class PresencePolicy:
 
     def reset(self, *, block=False):
         if block:
-            self.blocked_track = self.track_id
+            self.blocked_track, self.blocked_since = self.track_id, None
         self.active = False
         self.track_id = self.candidate = self.since = self.absent_since = None
 
