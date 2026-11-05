@@ -29,6 +29,11 @@ RESULT = re.compile(
 )
 REQUEST_MIN_WORDS = 3
 TOOL_ALLOWANCE = 2.5  # seconds a tool may precede the guest's transcript
+# A guest remark while Codex works ("ừ nhanh nha bạn") starts a new request, but the tool
+# result Trend has not read out yet is still what it is about to say (2026-11-05: a real
+# "Bạn quét QR..." was cut). Such a result backs a reply for this long after the tool,
+# until a reply with result wording has been spoken after it.
+RELAY_WINDOW = 15.0
 
 
 class ClaimGuard:
@@ -36,6 +41,7 @@ class ClaimGuard:
         self.request_at = None
         self.request_text = ""
         self.tool_at = None
+        self.relayed_at = None  # when Trend last finished a reply that stated a result
         self.flagged = set()
         self.blocked = 0
 
@@ -48,14 +54,26 @@ class ClaimGuard:
     def tool(self, now):
         self.tool_at = now
 
-    def backed(self):
+    def backed(self, now=None):
         if self.tool_at is None:
             return False
-        return self.request_at is None or self.tool_at >= self.request_at - TOOL_ALLOWANCE
+        if self.request_at is None or self.tool_at >= self.request_at - TOOL_ALLOWANCE:
+            return True
+        # A tool result not yet read out, from before the guest's latest remark.
+        return (
+            now is not None
+            and (self.relayed_at is None or self.tool_at > self.relayed_at)
+            and now - self.tool_at <= RELAY_WINDOW
+        )
+
+    def done(self, text, now):
+        """A finished Trend reply; one that stated a result has read out the tool results."""
+        if RESULT.search(str(text)):
+            self.relayed_at = now
 
     def reply(self, turn_id, text, now):
         """True once per reply when its text so far states a result no tool produced."""
-        if turn_id in self.flagged or not RESULT.search(str(text)) or self.backed():
+        if turn_id in self.flagged or not RESULT.search(str(text)) or self.backed(now):
             return False
         self.flagged.add(turn_id)
         self.blocked += 1
