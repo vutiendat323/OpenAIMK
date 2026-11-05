@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Keyboard from 'react-simple-keyboard'
 import 'react-simple-keyboard/build/css/index.css'
+import { NO_OFFSET, clampOffset } from '../keyboardDrag'
+import type { Box, Offset } from '../keyboardDrag'
 
 export function VirtualKeyboard() {
   const [isOpen, setIsOpen] = useState(false)
@@ -9,6 +11,22 @@ export function VirtualKeyboard() {
   const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
   const keyboardRef = useRef<{ setInput: (input: string) => void } | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  // Staff or guests can drag the keyboard by its handle; the position lasts until the page
+  // reloads or the window is resized.
+  const [offset, setOffset] = useState<Offset>(NO_OFFSET)
+  const dragRef = useRef<{
+    pointerId: number
+    x: number
+    y: number
+    origin: Offset
+    base: Box
+  } | null>(null)
+
+  useEffect(() => {
+    const reset = () => setOffset(NO_OFFSET)
+    window.addEventListener('resize', reset)
+    return () => window.removeEventListener('resize', reset)
+  }, [])
 
   useEffect(() => {
     const handleFocusIn = (event: FocusEvent) => {
@@ -125,6 +143,40 @@ export function VirtualKeyboard() {
     }
   }
 
+  const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const box = wrapperRef.current?.getBoundingClientRect()
+    if (!box || (event.pointerType === 'mouse' && event.button !== 0)) return
+    dragRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      origin: offset,
+      base: {
+        left: box.left - offset.x,
+        top: box.top - offset.y,
+        width: box.width,
+        height: box.height,
+      },
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const moveDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    setOffset(
+      clampOffset(
+        drag.base,
+        { x: drag.origin.x + event.clientX - drag.x, y: drag.origin.y + event.clientY - drag.y },
+        { width: window.innerWidth, height: window.innerHeight },
+      ),
+    )
+  }
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null
+  }
+
   if (!isOpen) return null
 
   return (
@@ -133,11 +185,22 @@ export function VirtualKeyboard() {
       className="kiosk-keyboard-wrapper"
       role="region"
       aria-label="Bàn phím ảo Kiosk"
+      style={{ translate: `${offset.x}px ${offset.y}px` }}
       onPointerDown={(e) => {
         // Prevent clicking keys from stealing focus from active input
         e.preventDefault()
       }}
     >
+      <div
+        className="kiosk-keyboard-handle"
+        title="Kéo để di chuyển bàn phím (nhấn đúp để đặt lại)"
+        aria-hidden="true"
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onDoubleClick={() => setOffset(NO_OFFSET)}
+      />
       <Keyboard
         keyboardRef={(r) => {
           keyboardRef.current = r
