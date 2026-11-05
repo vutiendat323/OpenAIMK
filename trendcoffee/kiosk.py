@@ -24,6 +24,8 @@ from .claim_guard import (
     UNBACKED_RESULT_NOTE,
     UNVERIFIED_PAID_NOTE,
     ClaimGuard,
+    paid_note,
+    paid_turn,
     recovery_turn,
     says_paid,
     spoken_items,
@@ -215,6 +217,11 @@ SCREEN_TOOLS = {
 }
 
 
+# Voice tools whose result can report a paid order to Codex.
+PAYMENT_TOOLS = ("kiosk_payment", "kiosk_checkout")
+PAID_NOTICE_WAIT = 20.0  # seconds a paid notice waits for such a tool call to finish
+
+
 def screen_order(menu, ids):
     """`ids` in menu order, so an added drink does not reshuffle what was already shown."""
     wanted = set(ids)
@@ -378,6 +385,17 @@ class InteractionHost:
         self.submitted = {}
         self.cleanup_tasks = set()
         self.lock = asyncio.Lock()
+        # A merchant-verified payment can be found by the screen's QR poll, the invoice worker
+        # or a voice tool; the guest hears about each paid order once (see _order_paid).
+        self.loop = None
+        self.paid_seen = set()  # orders this guest was told about, by a notice or a tool
+        self.paid_reported = set()  # orders a voice tool result already reported as paid
+        self.payment_reads = 0  # voice kiosk_payment/kiosk_checkout calls in progress
+        self.payment_reads_idle = asyncio.Event()
+        self.payment_reads_idle.set()
+        listeners = getattr(service, "paid_listeners", None)
+        if listeners is not None:
+            listeners.append(self._order_paid)
 
     async def voice_options(self):
         try:
@@ -412,6 +430,7 @@ class InteractionHost:
         if self.controller is not None:
             raise KioskError("kiosk_busy", 409)
         self.controller = secrets.token_urlsafe(24)
+        self.loop = asyncio.get_running_loop()
         self.camera_source = camera_source
         logging.getLogger(__name__).warning(
             "Kiosk controller attached at %s (camera %s)", time.strftime("%H:%M:%S"), camera_source
@@ -632,6 +651,8 @@ class InteractionHost:
         self.revision = 0
         self.calls.clear()
         self.submitted.clear()
+        self.paid_seen.clear()
+        self.paid_reported.clear()
         self.started = self.activity_at = self.clock()
         self.warned = False
         await self.emit(
@@ -798,9 +819,27 @@ class InteractionHost:
                 if not spec or not Draft202012Validator(spec["inputSchema"]).is_valid(args):
                     raise KioskError("invalid_tool_arguments")
                 guard.tool(self.clock())
-                result = await self._tool(name, args)
+                reads = name in PAYMENT_TOOLS
+                if reads:
+                    self.payment_reads += 1
+                    self.payment_reads_idle.clear()
+                try:
+                    result = await self._tool(name, args)
+                finally:
+                    if reads:
+                        self.payment_reads -= 1
+                        if not self.payment_reads:
+                            self.payment_reads_idle.set()
                 if says_paid(result):
                     paid_verified[0] = True
+                    payment = result.get("payment")
+                    payment = payment if isinstance(payment, dict) else {}
+                    # Codex already has this result: no separate paid notice for these orders.
+                    self.paid_reported.update(
+                        i
+                        for i in (result.get("order_id"), result.get("id"), payment.get("order_id"))
+                        if i
+                    )
                 if name == "kiosk_menu":
                     shown = [i["id"] for i in result.get("items", [])]
                     self.screen = {"kind": "menu", "ids": set(shown) or None, "at": self.clock()}
@@ -1720,8 +1759,66 @@ class InteractionHost:
         self.start_task = self.recovery_task = self.vision_task = self.tick_task = None
         self.policy = PresencePolicy()
 
+    def _order_paid(self, session, order):
+        """Service listener, called from any thread when an order first becomes paid."""
+        loop = self.loop
+        if loop is None or loop.is_closed():
+            return
+        with contextlib.suppress(RuntimeError):  # the loop closed meanwhile
+            loop.call_soon_threadsafe(self._paid_on_loop, session, order)
+
+    def _paid_on_loop(self, session, order):
+        if (
+            not self.active
+            or not self.token
+            or session != self.service.session_id(self.token)
+            or order.get("id") in self.paid_seen
+        ):
+            return
+        self.paid_seen.add(order.get("id"))
+        task = asyncio.create_task(self._announce_paid(self.generation, order))
+        self.cleanup_tasks.add(task)
+        task.add_done_callback(self.cleanup_tasks.discard)
+
+    async def _announce_paid(self, generation, order):
+        """Show the paid order and let Trend, with the order's details, tell the guest."""
+        # A voice payment read running now may be the one that found it; let it finish first.
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(self.payment_reads_idle.wait(), PAID_NOTICE_WAIT)
+        if (
+            not self.active
+            or generation != self.generation
+            or order.get("id") in self.paid_reported
+        ):
+            return
+        logging.getLogger(__name__).warning(
+            "Merchant verified payment for the guest's order at %s", time.strftime("%H:%M:%S")
+        )
+        self.audio_metrics["paid_notices"] = self.audio_metrics.get("paid_notices", 0) + 1
+        await self.emit("view", view="payment", order_id=order.get("id"))
+        thread = self.thread_id
+        if not thread:
+            return  # no conversation: the screen alone tells the guest
+        if hasattr(self.codex, "start_turn"):
+            try:
+                await self.codex.start_turn(thread, paid_turn(order))
+                return
+            except Exception:
+                logging.getLogger(__name__).exception("Kiosk paid-order turn failed")
+        if (
+            hasattr(self.codex, "append_text")
+            and self.active
+            and generation == self.generation
+            and thread == self.thread_id
+        ):
+            with contextlib.suppress(Exception):
+                await self.codex.append_text(thread, "developer", paid_note(order))
+
     async def close(self):
         self.closing = True
+        listeners = getattr(self.service, "paid_listeners", None)
+        if listeners is not None and self._order_paid in listeners:
+            listeners.remove(self._order_paid)
         await self.detach(self.controller)
         await asyncio.gather(*self.cleanup_tasks, return_exceptions=True)
         await self.codex.close()
