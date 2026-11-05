@@ -595,6 +595,27 @@ class InteractionHost:
         else:
             await self.emit("audio", audio=audio)
 
+    def _reply_cut(self, dropped_ms):
+        """A guest turn began while Trend was speaking: the rest of the reply is not heard.
+
+        Either the guest spoke over Trend or Trend's own voice came back through the
+        microphone; fusion_recent around this time tells which. `dropped_ms` is known only
+        for the server speaker (Pet); the browser player (Avatar 3D) does not report it.
+        """
+        cuts = self.audio_metrics.setdefault(
+            "reply_cuts", {"count": 0, "dropped_ms": 0, "unmeasured": 0}
+        )
+        cuts["count"] += 1
+        if dropped_ms:
+            cuts["dropped_ms"] += dropped_ms
+        else:
+            cuts["unmeasured"] = cuts.get("unmeasured", 0) + 1
+        logging.getLogger(__name__).warning(
+            "A guest turn cut Trend off at %s; %s of the reply dropped",
+            time.strftime("%H:%M:%S"),
+            f"{dropped_ms} ms" if dropped_ms else "an unmeasured part",
+        )
+
     def _recent_fusion(self, **values):
         """Numbers and categories only: the last 200 Fusion decisions (not plain silence)."""
         recent = self.audio_metrics.setdefault("fusion_recent", [])
@@ -882,23 +903,15 @@ class InteractionHost:
             ):
                 if "/userTurn/" in method:
                     dropped = None
+                    # Pet plays through the server speaker; Avatar 3D plays in the browser,
+                    # which reports playback, so `playing` covers both characters.
+                    speaking = self.playing
                     if self.speaker is not None:
                         dropped = self.speaker.buffered_ms()
                         self.speaker.interrupt()
                     self._recent_fusion(turn="user", dropped_ms=dropped)
-                    if dropped:
-                        # Either the guest spoke over Trend or Trend's own voice came back
-                        # through the microphone; fusion_recent around this time tells which.
-                        cuts = self.audio_metrics.setdefault(
-                            "reply_cuts", {"count": 0, "dropped_ms": 0}
-                        )
-                        cuts["count"] += 1
-                        cuts["dropped_ms"] += dropped
-                        logging.getLogger(__name__).warning(
-                            "A guest turn cut Trend off at %s; %d ms of the reply dropped",
-                            time.strftime("%H:%M:%S"),
-                            dropped,
-                        )
+                    if dropped or speaking:
+                        self._reply_cut(dropped)
                 else:
                     reply_stopped[0] = False
                     if self.speaker is not None:

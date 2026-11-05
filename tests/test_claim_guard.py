@@ -522,9 +522,29 @@ def test_a_guest_turn_that_cuts_trend_off_is_logged_and_counted(svc, caplog):
         with caplog.at_level("WARNING", logger="trendcoffee.kiosk"):
             await on_event("thread/realtime/userTurn/started", {"turnId": "u2"})
         assert "interrupt" in speaker.calls
-        assert host.audio_metrics["reply_cuts"] == {"count": 1, "dropped_ms": 480}
+        assert host.audio_metrics["reply_cuts"] == {"count": 1, "dropped_ms": 480, "unmeasured": 0}
         assert "cut Trend off" in caplog.text and "480 ms" in caplog.text
         speaker.queued_ms = 0  # nothing left of a reply: not a cut
+        await on_event("thread/realtime/userTurn/started", {"turnId": "u3"})
+        assert host.audio_metrics["reply_cuts"]["count"] == 1
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_a_cut_while_the_browser_plays_trend_is_counted_without_a_duration(svc, caplog):
+    """Avatar 3D plays in the browser (no server speaker): a cut is still logged."""
+
+    async def run():
+        host, _, _, _, on_event = await voice_host(svc)
+        host.speaker = None  # Avatar 3D: the browser player reports playback instead
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
+        host.playing = True
+        with caplog.at_level("WARNING", logger="trendcoffee.kiosk"):
+            await on_event("thread/realtime/userTurn/started", {"turnId": "u2"})
+        assert host.audio_metrics["reply_cuts"] == {"count": 1, "dropped_ms": 0, "unmeasured": 1}
+        assert "cut Trend off" in caplog.text and "an unmeasured part" in caplog.text
+        host.playing = False  # Trend silent: a guest turn is not a cut
         await on_event("thread/realtime/userTurn/started", {"turnId": "u3"})
         assert host.audio_metrics["reply_cuts"]["count"] == 1
         await host.close()
