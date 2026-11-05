@@ -114,6 +114,7 @@
 - Frontend: Node ≥22.12, `npm ci` then `npm run dev` in `frontend/`.
 - Check runtime with `.venv/bin/python scripts/kiosk.py status` before deployment work.
   Start/stop services only within the requested operational task and protect active guests.
+  Staff without a terminal use **Trend Kiosk Manager** (`scripts/kiosk_manager_gui.py`, see `docs/workflows/kiosk-manager.md`).
 - Direct serve defaults to local queue. Launcher start enables merchant mode by default;
   use `TREND_MERCHANT_ENABLED=0` for local-only kiosk development.
 - Default to C920 local camera priority; explicit device-camera selection overrides it
