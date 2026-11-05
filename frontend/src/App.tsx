@@ -20,7 +20,7 @@ import { AvatarAssistant } from './components/AvatarAssistant'
 import { SettingsDialog } from './components/SettingsDialog'
 import { VirtualKeyboard } from './components/VirtualKeyboard'
 import { matchShortcut, saveShown, storedShown } from './kioskShortcuts'
-import { DEFAULT_IDLE_SECONDS, idleNoticeMs } from './kioskTiming'
+import { DEFAULT_IDLE_SECONDS } from './kioskTiming'
 import { usePreferences } from './usePreferences'
 import { initialNavigation, navigationReducer } from './navigation'
 import type { NavigationAction } from './navigation'
@@ -131,7 +131,6 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<Order | null>(null)
   const [error, setError] = useState('')
-  const [idle, setIdle] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const menuScroll = useRef<HTMLDivElement>(null)
   const lastActivity = useRef(0)
@@ -282,7 +281,6 @@ export default function App() {
     setQuery('')
     setVoiceMenuIds(null)
     setCategory('all')
-    setIdle(false)
     setShowScrollTop(false)
     menuScroll.current?.scrollTo({ top: 0, behavior: 'instant' })
     guestInteracted.current = false
@@ -327,7 +325,6 @@ export default function App() {
     const activity = () => {
       guestInteracted.current = true
       lastActivity.current = Date.now()
-      setIdle(false)
       idleActions.current.activity()
     }
     window.addEventListener('pointerdown', activity)
@@ -344,8 +341,8 @@ export default function App() {
         return
       }
       const elapsed = Date.now() - lastActivity.current
+      // No on-screen countdown: in a voice session Trend says the warning itself.
       if (elapsed >= idleSeconds.current * 1000) idleActions.current.reset()
-      else if (elapsed >= idleNoticeMs(idleSeconds.current)) setIdle(true)
     }, 1000)
     return () => {
       clearInterval(timer)
@@ -606,20 +603,6 @@ export default function App() {
             </Button>
           </div>
         </header>
-      )}
-      {idle && !assistantIdle && (
-        <div className="idle-notice" role="status">
-          {t('Phiên sẽ kết thúc sau 30 giây không tương tác.')}
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setIdle(false)
-              lastActivity.current = Date.now()
-            }}
-          >
-            {t('Tiếp tục chọn món')}
-          </Button>
-        </div>
       )}
       <div className="kiosk-layout">
         {voice.enabled && <AvatarAssistant voice={voice} token={token} />}

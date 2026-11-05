@@ -33,6 +33,12 @@ from .claim_guard import (
 from .codex_voice import CodexVoice
 from .kiosk_timing import KioskTiming
 from .service import ServiceError
+from .session_notices import (
+    fallback_text,
+    idle_warning_lead,
+    idle_warning_turn,
+    time_warning_turn,
+)
 from .speaker import SpeakerPeer
 
 
@@ -385,6 +391,10 @@ class InteractionHost:
         self.vision_task = self.tick_task = self.start_task = None
         self.manual = False
         self.started = self.activity_at = 0
+        # The guest's own activity (speech, touch, cart); Trend's speech is not counted, so a
+        # spoken idle warning cannot keep the session open by itself.
+        self.guest_activity_at = 0
+        self.idle_warning = None  # {"deadline", "guest_at"} after Trend warned of idleness
         self.warned = False
         self.calls = OrderedDict()
         self.submitted = {}
@@ -659,8 +669,9 @@ class InteractionHost:
         self.submitted.clear()
         self.paid_seen.clear()
         self.paid_reported.clear()
-        self.started = self.activity_at = self.clock()
+        self.started = self.activity_at = self.guest_activity_at = self.clock()
         self.warned = False
+        self.idle_warning = None
         await self.emit(
             "session",
             session_token=self.token,
@@ -918,7 +929,7 @@ class InteractionHost:
                 if role in ("user", "assistant") and text.strip():
                     history.append((role, text.strip()[:240]))
                 if role == "user":
-                    self.activity_at = self.clock()
+                    self.activity_at = self.guest_activity_at = self.clock()
                     guard.guest(text, self.clock())
                 elif (
                     role == "assistant"
@@ -1030,7 +1041,7 @@ class InteractionHost:
                         self.audio_packet("native_input")
                         if event.get("accepted"):
                             self.last_accepted_audio_at = self.clock()
-                            self.activity_at = self.clock()
+                            self.activity_at = self.guest_activity_at = self.clock()
                 elif event.get("type") == "fusion":
                     verdict = str(event.get("verdict", "unknown"))
                     diagnostics = event.get("diagnostics")
@@ -1163,7 +1174,7 @@ class InteractionHost:
     def _changed(self):
         self.revision += 1
         self.quote = None
-        self.activity_at = self.clock()
+        self.activity_at = self.guest_activity_at = self.clock()
 
     async def _tool(self, name, args):
         self.activity_at = self.clock()
@@ -1508,7 +1519,7 @@ class InteractionHost:
                 self.activity_at = self.clock()
             return {}
         if kind == "activity":
-            self.activity_at = self.clock()
+            self.activity_at = self.guest_activity_at = self.clock()
             return {}
         async with self.lock:
             self._check(message.get("generation"))
@@ -1673,27 +1684,35 @@ class InteractionHost:
                 await self.end("sensor_or_customer_left")
             if not self.active:
                 continue
-            limit = self.session_limit(now)
-            if limit in ("time_limit", "idle"):
-                await self.end(limit)
-            elif limit == "warning":
-                self.warned = True
-                remaining = round(self.session_timing["warning_seconds"])
-                await self.emit(
-                    "warning",
-                    message=(
-                        "Phiên trò chuyện còn một phút."
-                        if remaining == 60
-                        else f"Phiên trò chuyện còn {remaining} giây."
-                    ),
-                )
+            await self._session_step(now)
+
+    async def _session_step(self, now):
+        """One tick of a guest session: end it, or have Trend warn before it ends."""
+        limit = self.session_limit(now)
+        if limit in ("time_limit", "idle"):
+            await self.end(limit)
+        elif limit == "warning":
+            self.warned = True
+            self._warn("time", self.session_timing["warning_seconds"])
+        elif limit == "idle_warning":
+            lead = idle_warning_lead(self.session_timing["idle_seconds"])
+            self.idle_warning = {"deadline": now + lead, "guest_at": self.guest_activity_at}
+            self._warn("idle", lead)
 
     def session_limit(self, now):
-        """'time_limit', 'idle', 'warning' (once) or None, from this guest's own limits."""
+        """'time_limit', 'idle', 'warning' / 'idle_warning' (once each) or None.
+
+        Uses this guest's own limits. After an idle warning the session ends at the promised
+        time unless the guest acts; Trend speaking the warning does not count as activity.
+        """
         limits = self.session_timing
         elapsed = now - self.started
         if elapsed >= limits["session_limit_seconds"]:
             return "time_limit"
+        if self.idle_warning and self.guest_activity_at > self.idle_warning["guest_at"]:
+            self.idle_warning = None  # the guest came back
+        if self.idle_warning and now >= self.idle_warning["deadline"]:
+            return "idle"
         if now - self.activity_at >= limits["idle_seconds"]:
             return "idle"
         if (
@@ -1702,7 +1721,32 @@ class InteractionHost:
             and not self.warned
         ):
             return "warning"
+        if not self.idle_warning and now - self.activity_at >= limits["idle_seconds"] - (
+            idle_warning_lead(limits["idle_seconds"])
+        ):
+            return "idle_warning"
         return None
+
+    def _warn(self, kind, seconds):
+        """Trend says the warning; the screen shows it only if Trend cannot."""
+        generation, thread = self.generation, self.thread_id
+        text = idle_warning_turn(seconds) if kind == "idle" else time_warning_turn(seconds)
+        self.audio_metrics["spoken_warnings"] = self.audio_metrics.get("spoken_warnings", 0) + 1
+
+        async def speak():
+            if thread and hasattr(self.codex, "start_turn"):
+                try:
+                    await self.codex.start_turn(thread, text)
+                    return
+                except Exception:
+                    logging.getLogger(__name__).exception("Kiosk %s warning turn failed", kind)
+            if self.active and generation == self.generation:
+                await self.emit("warning", message=fallback_text(kind, seconds))
+
+        # Not awaited: a Codex request must not hold up the session clock.
+        task = asyncio.create_task(speak())
+        self.cleanup_tasks.add(task)
+        task.add_done_callback(self.cleanup_tasks.discard)
 
     def _presence_limits(self):
         values = self.timing.values

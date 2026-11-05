@@ -90,9 +90,6 @@ const english: Record<string, string> = {
   'Đang tải bàn…': 'Loading tables…',
   'VD: 05': 'e.g. 05',
   'Tiến độ': 'Order status',
-  'Phiên sẽ kết thúc sau 30 giây không tương tác.':
-    'Your session will end after 30 seconds of inactivity.',
-  'Tiếp tục chọn món': 'Keep ordering',
   'Danh mục thực đơn': 'Menu categories',
   'Thực đơn': 'Menu',
   'Tất cả': 'All',
