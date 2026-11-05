@@ -246,7 +246,7 @@ export function useKioskVoice(onEvent: (event: KioskEvent) => void, token = '') 
     try {
       const videoStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } },
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 20 } },
       })
       if (
         runtime.sessionEpoch !== attempt ||
@@ -286,6 +286,14 @@ export function useKioskVoice(onEvent: (event: KioskEvent) => void, token = '') 
         const result = (await command({ type: 'camera_offer', sdp })) as { sdp?: unknown }
         if (typeof result?.sdp !== 'string') throw new Error('camera_answer_missing')
         return result.sdp
+      })
+      .then(() => {
+        // The sender's numbers, so the kiosk log can tell where a stalled camera stopped.
+        const timer = window.setInterval(() => {
+          if (runtime.camera !== camera || runtime.socket?.readyState !== WebSocket.OPEN)
+            return clearInterval(timer)
+          void camera.readStats((stats) => send({ type: 'camera_stats', stats })).catch(() => {})
+        }, 2000)
       })
       .catch(() => {
         // Socket JPEGs keep the camera working.
@@ -424,7 +432,7 @@ export function useKioskVoice(onEvent: (event: KioskEvent) => void, token = '') 
                 facingMode: { ideal: 'user' },
                 width: { ideal: 640 },
                 height: { ideal: 480 },
-                frameRate: { ideal: 30, max: 30 },
+                frameRate: { ideal: 15, max: 20 },
               }
             : false,
       })
@@ -605,6 +613,13 @@ export function useKioskVoice(onEvent: (event: KioskEvent) => void, token = '') 
         }
         if (event.type === 'camera' && typeof event.local_available === 'boolean')
           void syncCamera(event.local_available)
+        if (event.type === 'camera_reset') {
+          // The server saw this connection's video stop: socket JPEGs carry the camera until
+          // a new connection is up.
+          runtime.camera?.close()
+          runtime.camera = null
+          window.setTimeout(() => startRtcCamera(), 1000)
+        }
         if (event.type === 'status') {
           setState(event.status || '')
           setStatus(event.message || '')

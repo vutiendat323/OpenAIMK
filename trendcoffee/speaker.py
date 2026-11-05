@@ -109,12 +109,17 @@ class SpeakerTrack(AudioStreamTrack):
             "added_quiet": 0,
             "max_queue_ms": 0,
             "overflow": 0,
+            # Trend's audio that arrived after a guest turn stopped the reply and before the
+            # next reply began; it is never played. Nonzero inside a reply = lost speech.
+            "ignored_suspended_ms": 0,
         }
 
     def buffered_ms(self):
         return len(self.frames) * FRAME_MS
 
     def push(self, pcm):
+        if self.suspended and pcm:
+            self.metrics["ignored_suspended_ms"] += len(pcm) * FRAME_MS // FRAME_BYTES
         if self.suspended or self.readyState != "live" or not pcm or len(pcm) % 2:
             return
         count = -(-len(pcm) // FRAME_BYTES)

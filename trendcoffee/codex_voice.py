@@ -4,6 +4,7 @@ import asyncio
 import base64
 import contextlib
 import json
+import logging
 import os
 import shutil
 import tomllib
@@ -364,6 +365,12 @@ class CodexVoice:
                     if future is not None and not future.done():
                         future.set_result(params["sdp"])
                 elif method in ("thread/realtime/error", "thread/realtime/closed"):
+                    # Codex's own reason, without SDP (2026-11-05: voice refused for hours
+                    # with only "codex_voice_unavailable" in the log).
+                    detail = {k: v for k, v in params.items() if k not in ("threadId", "sdp")}
+                    logging.getLogger(__name__).warning(
+                        "Codex %s: %s", method.rsplit("/", 1)[-1], json.dumps(detail)[:500]
+                    )
                     future = self.started.get(thread) or self.sdp.get(thread)
                     if future is not None and not future.done():
                         future.set_exception(RuntimeError("codex_voice_unavailable"))

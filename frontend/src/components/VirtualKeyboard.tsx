@@ -28,26 +28,32 @@ export function VirtualKeyboard() {
     return () => window.removeEventListener('resize', reset)
   }, [])
 
-  useEffect(() => {
-    const handleFocusIn = (event: FocusEvent) => {
-      const target = event.target as HTMLElement | null
-      if (!target) return
-      if (wrapperRef.current?.contains(target)) return
-
-      if (
-        (target instanceof HTMLInputElement &&
-          ['text', 'search', 'tel', 'password', ''].includes(target.type) &&
-          !target.disabled &&
-          !target.readOnly) ||
-        (target instanceof HTMLTextAreaElement && !target.disabled && !target.readOnly)
-      ) {
-        activeInputRef.current = target
-        setInputVal(target.value || '')
-        keyboardRef.current?.setInput(target.value || '')
-        setLayoutName('default')
-        setIsOpen(true)
-      }
+  const openFor = (target: HTMLElement | null) => {
+    if (!target || wrapperRef.current?.contains(target)) return
+    if (
+      (target instanceof HTMLInputElement &&
+        ['text', 'search', 'tel', 'password', ''].includes(target.type) &&
+        !target.disabled &&
+        !target.readOnly) ||
+      (target instanceof HTMLTextAreaElement && !target.disabled && !target.readOnly)
+    ) {
+      activeInputRef.current = target
+      setInputVal(target.value || '')
+      keyboardRef.current?.setInput(target.value || '')
+      setLayoutName('default')
+      setIsOpen(true)
     }
+  }
+  // Turned back on with Ctrl+Alt+K while a text field already has focus: that field never
+  // fires another focus event, so the keyboard would stay hidden until another field is
+  // touched (2026-11-05: "Ctrl+Alt+K a second time shows nothing").
+  useEffect(() => {
+    openFor(document.activeElement as HTMLElement | null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const handleFocusIn = (event: FocusEvent) => openFor(event.target as HTMLElement | null)
 
     const handleFocusOut = (event: FocusEvent) => {
       const nextTarget = event.relatedTarget as HTMLElement | null

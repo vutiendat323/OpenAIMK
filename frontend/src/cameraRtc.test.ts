@@ -24,6 +24,23 @@ class FakePeer {
   close() {
     this.closed = true
   }
+  async getStats() {
+    return new Map<string, Record<string, unknown>>([
+      ['a', { type: 'inbound-rtp', kind: 'video', framesDecoded: 9 }],
+      [
+        'b',
+        {
+          type: 'outbound-rtp',
+          kind: 'video',
+          framesSent: 34,
+          ssrc: 7,
+          timestamp: 1,
+          qualityLimitationReason: 'cpu',
+          mid: '0',
+        },
+      ],
+    ])
+  }
 }
 
 const track = { kind: 'video' } as MediaStreamTrack
@@ -34,7 +51,7 @@ function camera() {
   return { rtc, peer }
 }
 
-it('sends the camera as send-only video at up to 30 frames per second', async () => {
+it('sends the camera as send-only video at up to 15 frames per second', async () => {
   const { rtc, peer } = camera()
   const offers: string[] = []
   await rtc.connect(track, async (sdp) => {
@@ -44,7 +61,7 @@ it('sends the camera as send-only video at up to 30 frames per second', async ()
   expect(peer.transceivers).toHaveLength(1)
   expect(peer.transceivers[0].track).toBe(track)
   expect(peer.transceivers[0].init.direction).toBe('sendonly')
-  expect(peer.transceivers[0].init.sendEncodings?.[0].maxFramerate).toBe(30)
+  expect(peer.transceivers[0].init.sendEncodings?.[0].maxFramerate).toBe(15)
   expect(offers).toEqual(['browser-offer'])
   expect(peer.remote).toEqual({ type: 'answer', sdp: 'server-answer' })
 })
@@ -84,4 +101,11 @@ it('waits for local candidates before sending the offer', async () => {
   peer.onicegatheringstatechange?.()
   await connecting
   expect(offered).toBe(true)
+})
+
+it('reports only the video sender numbers and its quality limit', async () => {
+  const { rtc } = camera()
+  const reports: Record<string, number | string>[] = []
+  await rtc.readStats((stats) => reports.push(stats))
+  expect(reports).toEqual([{ framesSent: 34, qualityLimitationReason: 'cpu' }])
 })
