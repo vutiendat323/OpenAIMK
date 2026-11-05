@@ -1,0 +1,52 @@
+{
+  "target": "disposable localhost server",
+  "console_errors": [],
+  "network_errors": [],
+  "responsive": [
+    {
+      "width": 375,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "width": 1080,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "overflow": false
+    }
+  ],
+  "accessibility": [
+    {
+      "page": "customer-menu",
+      "violations": []
+    },
+    {
+      "page": "product-panel",
+      "violations": []
+    },
+    {
+      "page": "product-popup-dark",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": [
+            {
+              "target": [
+                ".checkout-dock-cancel"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 1.2 (foreground color: #e5ece6, background color: #ffffff, font size: 11.3pt (15px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "visual_regression": "INCONCLUSIVE: no approved screenshot baseline",
+  "core_web_vitals": "Not established by a single synthetic session; no field INP claim"
+}

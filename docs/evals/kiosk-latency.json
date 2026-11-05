@@ -1,0 +1,34 @@
+{
+  "scope": "5 fresh browser contexts, Chromium headless, localhost, desktop 1440x1000; no CPU/network throttling",
+  "samples": [
+    {
+      "menu_ready_ms": 319.4,
+      "lcp": 292,
+      "cls": 0.00022500481499565972
+    },
+    {
+      "menu_ready_ms": 218.8,
+      "lcp": 192,
+      "cls": 5.143217863859953e-05
+    },
+    {
+      "menu_ready_ms": 208.3,
+      "lcp": 192,
+      "cls": 5.143217863859953e-05
+    },
+    {
+      "menu_ready_ms": 210.7,
+      "lcp": 196,
+      "cls": 5.143217863859953e-05
+    },
+    {
+      "menu_ready_ms": 211.1,
+      "lcp": 180,
+      "cls": 5.143217863859953e-05
+    }
+  ],
+  "p95_menu_ready_ms": 319.4,
+  "max_observed_lcp_ms": 292,
+  "max_observed_cls": 0.00022500481499565972,
+  "limits": "Synthetic smoke only. Includes automation wait overhead. LCP sampled after fonts + 500 ms; not field Core Web Vitals or customer-network SLA. INP not established."
+}

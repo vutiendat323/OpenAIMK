@@ -1,0 +1,3 @@
+Procedural robot adapted from OpenJarvis frontend/src/components/Kiosk/Pet/ThreeChibiRobot.tsx.
+OpenJarvis is licensed under Apache-2.0; see OpenJarvis-Apache-2.0.txt.
+Modified for OpenAIMK kiosk character selection and state-driven presentation.

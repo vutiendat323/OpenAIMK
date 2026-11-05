@@ -1,0 +1,44 @@
+.assistant-pet {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  will-change: transform;
+  transition: transform 0.14s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.assistant-pet.is-dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.pet-floating-body {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* The picture is sized from this box (see .pet-webgl): the robot is wider than
+     tall, so in a tall narrow panel the camera would fill the width edge to edge. */
+  container-type: size;
+  /* No page-added hover float (user decision 2026-11-04): Volt stands still and keeps
+     only its own Wobnimo animation. */
+}
+
+/* At most 5:4 tall (height <= 125% of width): the robot keeps room at its sides in a
+   tall panel; a wide or short panel still uses all the space it has. */
+.pet-webgl,
+.pet-fallback {
+  display: block;
+  width: 100%;
+  height: min(100cqh, 125cqw);
+  object-fit: contain;
+}
+
+.pet-webgl[hidden] {
+  display: none;
+}

@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "trendcoffee": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/home/metek/Projects/OpenAIMK",
+        "trendcoffee",
+        "mcp",
+        "--db",
+        "/home/metek/Projects/OpenAIMK/.runtime/trendcoffee.db"
+      ],
+      "env": {
+        "TREND_MERCHANT_ENABLED": "1",
+        "TREND_PRINT_QUEUE": "GP-C180I"
+      }
+    }
+  }
+}

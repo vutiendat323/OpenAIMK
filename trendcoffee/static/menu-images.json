@@ -1,0 +1,247 @@
+{
+  "23f99adf51": {
+    "src": "/menu-images/23f99adf51.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/capheden-1772763183937",
+    "name": "Cà phê đen"
+  },
+  "6f30478a3d": {
+    "src": "/menu-images/6f30478a3d.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/caphesua-1772763172826",
+    "name": "Cà phê sữa"
+  },
+  "5969c51624": {
+    "src": "/menu-images/5969c51624.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/espresso-1772763093035",
+    "name": "Espresso"
+  },
+  "725b037f8b": {
+    "src": "/menu-images/725b037f8b.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/caphebacxiu-1772763160434",
+    "name": "Cà phê bạc xỉu"
+  },
+  "c5fb8d4f4a": {
+    "src": "/menu-images/c5fb8d4f4a.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/chocolatte-1772762977158",
+    "name": "Choco latte "
+  },
+  "79468ddcbe": {
+    "src": "/menu-images/79468ddcbe.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/americano-1772763100778",
+    "name": "Americano"
+  },
+  "a433dc5046": {
+    "src": "/menu-images/a433dc5046.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/caphetiramisu-1772762399199",
+    "name": "Cà Phê Tiramisu"
+  },
+  "7dd3899ef1": {
+    "src": "/menu-images/7dd3899ef1.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/coldbreworiginal-1772761824977",
+    "name": "Cold Brew Original"
+  },
+  "88364dc9f0": {
+    "src": "/menu-images/88364dc9f0.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/caphemuoi-1772763140700",
+    "name": "Cà phê muối"
+  },
+  "59aee752f6": {
+    "src": "/menu-images/59aee752f6.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/coldbrewyuzuxoai-1772761805880",
+    "name": "Cold Brew Yuzu Xoài"
+  },
+  "613ab383b5": {
+    "src": "/menu-images/613ab383b5.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/caphehatde-1772763151961",
+    "name": "Cà phê hạt dẻ"
+  },
+  "595ae57d1d": {
+    "src": "/menu-images/595ae57d1d.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/coldbrewmongmo-1772761879723",
+    "name": "Cold Brew Mộng Mơ"
+  },
+  "fd118fb9cb": {
+    "src": "/menu-images/fd118fb9cb.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/affogato-1772763123799",
+    "name": "Affogato (kem cà phê)"
+  },
+  "bfa897c23b": {
+    "src": "/menu-images/bfa897c23b.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/latte-1772763133250",
+    "name": "Latte"
+  },
+  "b6390e4a95": {
+    "src": "/menu-images/b6390e4a95.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/coffeetrend-1772761740941",
+    "name": "Coffee Trend"
+  },
+  "34cd56d950": {
+    "src": "/menu-images/34cd56d950.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/phomaichanhday-1772761637884",
+    "name": "Phô Mai Chanh Dây"
+  },
+  "02958af6a2": {
+    "src": "/menu-images/02958af6a2.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/phomaivietquat-1772761313383",
+    "name": "Phô Mai Việt Quốc"
+  },
+  "f74cd4a56a": {
+    "src": "/menu-images/f74cd4a56a.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/banhtiramisu-1772762986991",
+    "name": "Bánh Tiramisu"
+  },
+  "61559f1a5e": {
+    "src": "/menu-images/61559f1a5e.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/banhlanh-1772762278613",
+    "name": "Bánh lạnh"
+  },
+  "e9619009d0": {
+    "src": "/menu-images/e9619009d0.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/saltedeggdanish-1772762232562",
+    "name": "Salted egg Danish"
+  },
+  "0923b88d65": {
+    "src": "/menu-images/0923b88d65.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/saltedeggcharcoalcroissant-1772762192707",
+    "name": "Salted egg charcoal croissant"
+  },
+  "94419d7903": {
+    "src": "/menu-images/94419d7903.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/cinnamonrolls-1772762271039",
+    "name": "Cinnamon rolls"
+  },
+  "9623c6083f": {
+    "src": "/menu-images/9623c6083f.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/matcharibboncroissant-1772762216937",
+    "name": "Matcha ribbon croissant"
+  },
+  "f6cf366066": {
+    "src": "/menu-images/f6cf366066.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/painsuisse-1772762258007",
+    "name": "Pain suisse"
+  },
+  "91654f2d02": {
+    "src": "/menu-images/91654f2d02.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/banhcroissantham%26cheese-1772762295919",
+    "name": "Bánh Croissant Ham & Cheese"
+  },
+  "9b2e64a826": {
+    "src": "/menu-images/9b2e64a826.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/trathaomocmatong-1772762966320",
+    "name": "Trà thảo mộc mật ong"
+  },
+  "e57dbb7519": {
+    "src": "/menu-images/e57dbb7519.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/traliptonchanhmatong-1772761774059",
+    "name": "Trà Lipton Chanh Mật Ong"
+  },
+  "53ed306165": {
+    "src": "/menu-images/53ed306165.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/trabac-1772762711895",
+    "name": "Trà Bắc"
+  },
+  "2e1d698f8a": {
+    "src": "/menu-images/2e1d698f8a.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/matchalatte-1772762881216",
+    "name": "Matcha latte"
+  },
+  "123d83a015": {
+    "src": "/menu-images/123d83a015.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/traoihong-1772762146509",
+    "name": "Trà Ổi Hồng"
+  },
+  "ea113ceea8": {
+    "src": "/menu-images/ea113ceea8.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/tranhoxanhkiwi-1772762160441",
+    "name": "Trà Nho Xanh Kiwi"
+  },
+  "a42ff4c9b2": {
+    "src": "/menu-images/a42ff4c9b2.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/trataoleque-1772763240468",
+    "name": "Trà táo lê quế"
+  },
+  "f3b023a9a4": {
+    "src": "/menu-images/f3b023a9a4.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/tranhaihoacuc-1772763197281",
+    "name": "Trà nhài hoa cúc"
+  },
+  "d68a13f553": {
+    "src": "/menu-images/d68a13f553.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/traluunhan-1772763231873",
+    "name": "Trà lựu nhãn"
+  },
+  "1dcb6f6e29": {
+    "src": "/menu-images/1dcb6f6e29.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/travaidao-1772763221660",
+    "name": "Trà vải đào"
+  },
+  "c60095d066": {
+    "src": "/menu-images/c60095d066.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/tranhietdoi-1772763207943",
+    "name": "Trà nhiệt đới"
+  },
+  "82bd49f25a": {
+    "src": "/menu-images/82bd49f25a.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/trasuabatuoc-1772761979186",
+    "name": "Trà Sữa Bá Tước "
+  },
+  "f1758d2c75": {
+    "src": "/menu-images/f1758d2c75.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/chocolatecoco-1772761909907",
+    "name": "Chocolate Coco"
+  },
+  "02b4e9d8ea": {
+    "src": "/menu-images/02b4e9d8ea.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/matchacoco-1772761893194",
+    "name": "Matcha Coco "
+  },
+  "47d8f8f865": {
+    "src": "/menu-images/47d8f8f865.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/matchatrend-1772761693406",
+    "name": "Matcha Trend"
+  },
+  "f1fb9b1ae7": {
+    "src": "/menu-images/f1fb9b1ae7.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/strawberrymatchalatte-1772762890808",
+    "name": "Strawberry matcha latte"
+  },
+  "721cd01523": {
+    "src": "/menu-images/721cd01523.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/nuocdua-1772762836291",
+    "name": "Nước dừa"
+  },
+  "6706183e96": {
+    "src": "/menu-images/6706183e96.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/camtuoi-1772762814304",
+    "name": "Cam tươi."
+  },
+  "943371828d": {
+    "src": "/menu-images/943371828d.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/daudodaxay-1772763023501",
+    "name": "Đậu đỏ đá xay "
+  },
+  "c7f1e73c50": {
+    "src": "/menu-images/c7f1e73c50.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/tiramisuchocodaxay-1772763063879",
+    "name": "Tiramisu choco đá xay"
+  },
+  "db5c602d8c": {
+    "src": "/menu-images/db5c602d8c.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/daukemdaxay-1772763075391",
+    "name": "Dâu kem đá xay"
+  },
+  "2ac9c59369": {
+    "src": "/menu-images/2ac9c59369.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/IMG_2657-1778239958993.png",
+    "name": "Yaourt Xoài Đá Xay"
+  },
+  "6c39112089": {
+    "src": "/menu-images/6c39112089.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/matchadaxay-1772761969967",
+    "name": "Matcha Đá Xay"
+  },
+  "f0e8b1465d": {
+    "src": "/menu-images/f0e8b1465d.webp",
+    "source_url": "https://trendcoffee.s3.ap-southeast-1.amazonaws.com/IMG_2659-1778239944419.png",
+    "name": "Yaourt Dâu Đá Xay"
+  }
+}

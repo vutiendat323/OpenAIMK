@@ -1,0 +1,19 @@
+{
+  "requests": 300,
+  "concurrency": 8,
+  "errors": 0,
+  "transport": "in_process_http",
+  "scope": "local HTTP routing/SQLite; excludes browser network, remote model and POS",
+  "p50_ms": 16.285,
+  "p95_ms": 19.194,
+  "p99_ms": 36.494,
+  "retrieval_requests": 50,
+  "retrieval_p95_ms": 1.371,
+  "cold_start_ms": 43.209,
+  "requests_per_second": 476.4,
+  "local_p95_target_ms": 250,
+  "target_met": true,
+  "python": "3.12.14",
+  "platform": "Linux",
+  "measured_at": "2026-10-16T15:47:00Z"
+}

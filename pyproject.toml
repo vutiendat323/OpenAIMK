@@ -1,0 +1,45 @@
+[project]
+name = "trendcoffee-agent"
+version = "0.1.0"
+description = "Sourced, low-latency customer service tools for Trend Coffee"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "mcp>=2.3,<3", "openai>=2,<3", "websockets>=15,<18", "jsonschema>=4.23,<5", "aiortc>=1.14,<2", "httpx>=0.28,<1"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.12,<1", "playwright>=1.50,<2"]
+
+[project.scripts]
+trendcoffee = "trendcoffee.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["trendcoffee"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"data/trendcoffee-public.json" = "trendcoffee/data/trendcoffee-public.json"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/trendcoffee", "/tests", "/data", "/docs", "/frontend",
+  "/.agents/skills/trendcoffee-service", "/AGENTS.md", "/README.md",
+  "/pyproject.toml", "/uv.lock", "/scripts", "/mcp.example.json", "/.env.example",
+]
+exclude = [
+  "/frontend/node_modules", "/frontend/dist", "/frontend/.vite",
+  "**/__pycache__", "**/*.pyc", "**/*.tsbuildinfo",
+]

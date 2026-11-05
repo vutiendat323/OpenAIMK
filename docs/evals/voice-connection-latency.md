@@ -1,0 +1,64 @@
+# Voice connection and response latency — 2026-10-21
+
+Historical note: the prepared idle call described below was removed on 2026-10-28 to avoid idle voice usage. See `idle-voice-on-demand.md` for the current behavior and verification.
+
+## Changes and evidence
+
+- Native WebRTC now gathers candidates on the default IPv4 route when that route is available among this peer's addresses. Docker/Tailscale candidates previously delayed negotiation. The hook is scoped to each aioice connection; unmatched/IPv6-only address lists retain their original candidates. This uses the installed aiortc 1.15.0 / aioice 0.10.2 private candidate-gathering seam; revalidate on upgrades.
+- Closing a cancelled peer now cancels and awaits outstanding aioice connectivity checks before socket teardown. A regression using a real STUN transaction reproduced a pending retry after close and verifies that no retry survives.
+- The old outer 10-second timeout could cancel a call that was still negotiating. A measured call became ready after 16.737 seconds. The outer budget is now 30 seconds, with a 25-second ready wait after SDP. This prevents that false failure; it does not itself make a slow network fast.
+- One unused call can be prepared at warm-up or while presence stabilizes. It rejects business tools, receives no customer audio, discards events, expires after 60 seconds, checks catalog freshness/transport health, and is adopted only once. Used guest threads are never recycled. An arriving guest joins an in-flight preparation instead of abandoning it after one second and opening another call. Cancellation and guest authority remain separate.
+- Partial transcripts now update the same bubble as final transcripts, using a stable role/turn ID even if fragments precede the native turn-created event. Partial text never authorizes a business action.
+- Full menu and service instructions remain on backing Codex, model `gpt-6-luna`, medium effort, no fallback. Realtime receives a short delegation prompt; duplicate startup context and acknowledgment filler are disabled. The native commentary handoff returns the real result.
+- Browser output buffers at least 80 ms, adjusted for two device render batches plus a 50 ms UI stall, capped at 200 ms. Short tails flush separately after 240 ms. On this host, baseLatency is 42.667 ms; the original 80 ms buffer underflowed during a 45 ms UI stall. The adjusted processor rendered every middle reference sample exactly (maximum error 0), starting at 170.667 ms in the diagnostic run. Guest resets, edge ramps and the six-second queue bound remain.
+
+## Measured limits
+
+Initial six-call probe: only 2/6 ready within ten seconds. After route/context changes: 6/6 ready, 2.645–7.224 seconds (`output/connection-cycles-before.json`, `output/connection-cycles-after.json`). A repeat with the kiosk running yielded 5/6 within that same artificial ten-second deadline (2.603–3.813 seconds for successful calls); the sixth timed out in ICE checking. These are small fixture samples, not an uptime guarantee. See `output/connection-cycles-live-10s.json`; the production budget is 30 seconds, not that probe's ten-second cutoff. A final three-call probe using the production 30-second outer budget succeeded only 1/3: 3.176 seconds, then timeouts at 26.382 and 26.311 seconds after ICE completed (DTLS/data channel not ready). See `output/connection-cycles-final-30s.json`. One teardown also exposed an aiortc internal connect-task InvalidStateError after transport closure; the STUN-retry regression is fixed, but this distinct upstream lifecycle race remains. **Live connection reliability is not fixed.** A prepared call was adopted in 0.04 ms; cold negotiation still takes seconds and can fail.
+
+The useful-response target of 1–2 seconds is **not met**. Latest synthesized-English menu probe measured transcript starting 0.955 seconds before input finished, the display tool at 4.130 seconds afterward, and first useful audio at 8.004 seconds. Earlier 1–2-second initial audio measurements included filler and did not measure useful answers. Removing duplicate context improved the observed useful response from 11.498 to 8.004 seconds in individual probes; this is not a controlled percentile benchmark. Results: `output/prepared-voice-quality.json`. The remaining delay is primarily native delegation/backing model/result-to-speech, not just browser PCM buffering. Physical Vietnamese microphone → Fusion → speaker timing remains unverified.
+
+No real merchant order, payment or printer job was issued by tests. Existing microphone/Fusion speaker verification was preserved.
+
+## Validation and deployment
+
+Frontend: 20 tests, production build, oxlint and Prettier passed. Final backend/browser suite: **200 passed in 43.60 seconds**. Ruff check and formatting passed. Built-app smoke passed at 1440/768/375 with no browser errors or axe violations, shared voice/touch cart, playback waveform, notes and guest isolation.
+
+Stopped only the previously authorized Jarvis Visual camera process. Trend Visual now owns C920, Visual listens on 9877 and API on 8080. The unrelated Jarvis server was not stopped. API was restarted after the final pending-preparation and STUN-teardown changes. A passive Visual socket probe also reported `local_camera_available=true` with current frame timestamps. Camera ownership and server readiness do not establish a successful physical customer conversation.
+
+## Self-evaluation
+
+Accuracy 4/5: sample-level browser tests and native timing recorded; physical acoustic quality unverified. Completeness 2/5: local transport defects are corrected, but live connection failures persist and useful speech is still about eight seconds in the fixture. Clarity 4/5: separate useful speech from filler and prepared handoff from cold setup. Actionability 4/5: deployed locally, camera ownership restored; physical end-to-end verification remains. Conciseness 4/5: changes reuse existing transport and tools. Overall 3.6/5. Next priority is measuring and shortening native delegation and result-to-speech without weakening menu correctness or changing the requested Luna/medium model.
+
+## Recovery follow-up — 2026-10-21
+
+The initial change still left two practical dead ends: a successful unused warm-up expired after 60 seconds without renewal, and guest startup stopped permanently after two failures. Idle preparation is now maintained with bounded retry backoff, checks for closed transports/catalog changes, and pauses during a customer session or pending guest teardown. A silent preparation or guest transport attempt has an eight-second handshake budget so a stuck negotiation is retried on a fresh call. Guest reconnection continues only while that same guest/generation remains active; presence and idle expiry end it. Cart/token ownership survives native reconnects. Initial native failures can still delay cold startup; this is recovery rather than proof that the underlying network path is fixed.
+
+The aiortc untracked connect coroutine is now owned per NativePeer: pending connect tasks are cancelled/awaited before ICE teardown, and late scheduled connect coroutines return immediately after closure. Unexpected connect errors report the existing voice error event. This is an additional aiortc 1.15.0 private seam that must be validated on upgrades. Real local offer/answer regression covers immediate close after SDP; pending real STUN retry regression remains.
+
+Browser WebSocket closure now schedules reconnection with bounded backoff. Manual mic-off/unmount cancels reconnection; authorization/controller rejection is not retried. Reconnect resets the server generation counter and ignores retired-socket messages. This avoids ignoring all events after a restarted server starts counting guests at zero. The actual built-app browser smoke forcibly closes its ASGI WebSocket with service-restart code 1012, resets server generation, verifies automatic reconnect and a new accepted session, then verifies explicit mic-off stays off.
+
+The backing model remains `gpt-6-luna`, medium effort, no fallback. Installed CLI model metadata advertises Fast (`priority`) for that exact model; thread creation now requests it. A native fixture probe succeeded with useful audio at **6.260 seconds**, display tool at **3.765 seconds**, and transcript starting **0.577 seconds before input end** (`output/priority-voice-quality.json`). This is one observation, not a percentile or proof of a 1–2-second response. Fast uses higher subscription allowance/credit rates; see [official OpenAI documentation on speed](https://learn.chatgpt.com/docs/agent-configuration/speed). No global Codex settings or other models were changed.
+
+### Additional live evidence
+
+- Isolated six-call probe: 6/6 connected in 3.247–3.914 seconds. A subsequent controlled single/overlap/single-after probe had failures after the overlap ended, so simultaneous calls alone do **not** explain the failures. `output/connection-overlap.json`.
+- Pinning only the first remote candidate did not improve reliability and was not shipped. DTLS metadata tracing saw repeated ClientHello packets without a server reply on some calls; this does not establish why the reply is absent. No SDP credentials or audio are included in the metadata trace.
+- Maintained preparation eventually handed off **6/6** unused native calls in **0.038–0.120 ms**, including replacement of an explicitly closed idle transport (`output/maintained-voice.json`). Preparing those calls took **4.120–57.525 seconds**, including retries. Handoff success does not erase that cold/preparation delay.
+- The deployed API itself, with actual Fusion/native transport and the current menu, accepted a synthetic empty guest and emitted `listening` after **0.016 seconds**, using its healthy prepared call. No audio, business tool, merchant order, payment or printer action was sent. `output/live-kiosk-connect.json`. `/api/kiosk/status` now exposes `voice_prepared` separately from an active guest's `voice_ready`.
+- Final full backend/browser suite: **203 passed in 48.00 seconds**; latest prepared/socket/AV checks after readiness telemetry: **15 passed**. Frontend **20 passed**, build/TypeScript, oxlint, Prettier, Ruff and responsive browser smoke passed. No browser errors or axe violations at 1440/768/375.
+- Runtime: API 8080 and local C920 Visual 9877 are running. No real microphone/speaker acoustic measurement was performed. Existing browser tabs must load the new built JavaScript once to gain automatic reconnect.
+
+### Follow-up self-evaluation
+
+Accuracy 4/5: live server readiness measured separately from synthetic speech; physical audio still unverified. Completeness 3/5: recovery and browser restart dead ends corrected; cold network failures and useful-response target remain. Clarity 4/5: prepared handoff and cold setup reported separately. Actionability 4/5: deployed, verified at the actual endpoint; old frontend tabs need the updated bundle. Conciseness 4/5: existing transport, Fusion and business tools retained. Overall **3.8/5**. Next priority is reducing native delegation/model-to-speech time and diagnosing intermittent upstream handshake failures without concealing them behind the prepared-call metric.
+
+## Voice acknowledgment before business tools — 2026-10-21
+
+User clarified that `/voice` must acknowledge promptly before tool execution, then report the actual result. This supersedes the previous interpretation that prohibited all initial acknowledgment. Both native WebRTC and legacy PCM start requests now enable `delegationAckFiller`. Voice instructions require exactly one brief 4–8-word acknowledgment, immediate delegation without customer confirmation, and a concise result after the real tool response. The combined speech budget remains 30 words and at most two drink names. An acknowledgment cannot claim addition, checkout, QR readiness or payment success. Backing Codex still uses actual tool results.
+
+Live native fixture test deliberately held the menu tool for three seconds. TREND said “Dạ, mình xem ngay nhé.” with first audio **1.624 seconds** after input end; tool execution started at **5.527 seconds** and returned at **8.528 seconds**. The final spoken result was “Hiện có cà phê sữa, giá 40.000 đồng ạ.” This verifies acknowledgment precedes both tool invocation and completion, rather than relabeling completed work as an early response. `output/ack-before-tools.json`. No real business actions were performed.
+
+Focused AV/menu/prepared tests: **17 passed**; Ruff check/format passed. WebRTC and PCM configuration are both covered. API update waits for the active customer session to end; current cart is not intentionally interrupted.
+
+Deployment completed after the active guest ended: owned API pid 378120 restarted; Visual/C920 continued running. Health endpoint passed. The change is now active for new voice sessions.

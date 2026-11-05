@@ -1,0 +1,9 @@
+[Unit]
+Description=Refresh the Trend Coffee public menu
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/OpenAIMK
+ExecStart=%h/Projects/OpenAIMK/.venv/bin/python -B -m trendcoffee sync-public --db %h/Projects/OpenAIMK/.runtime/trendcoffee.db
+TimeoutStartSec=45s
+UMask=0077

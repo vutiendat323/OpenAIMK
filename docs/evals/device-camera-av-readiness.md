@@ -1,0 +1,26 @@
+# Device camera and AV readiness — 2026-10-28
+
+The reported symptoms were a roughly 2 FPS device-camera feed and speech not being recognized after entering a conversation. This investigation reproduced two local defects, and observed a separate intermittent native handshake timeout. Physical microphone/acoustic recognition on the user's device has not been measured.
+
+## Findings and changes
+
+- The device-camera JPEG pump relied solely on a page interval. A real Chromium regression test forces that interval to 1000 ms and receives only **2 JPEG frames in 2.5 seconds** before the fix. Camera capture now also runs on AudioWorklet PCM callbacks, including while waiting for a guest; it remains rate limited and respects the selected camera, socket backpressure, encoding-in-progress, and capture timestamps. The fixed regression received **29 frames / 11.2 FPS** during the full test run. Mic-off stops both capture paths.
+- `FusionProcess.begin()` returned after writing a command, before the model worker had initialized the stream or connected to Visual. It now awaits an acknowledgment carrying both guest generation and request ID. The worker confirms running processing tasks, a ready Visual audio bridge, and fresh live-face evidence within the configured 0.8 m anchor range. Missing evidence produces an error rather than a ready acknowledgment, retaining loaded models for retry. No identity/anti-spoof gate was bypassed.
+- Browser sessions must supply actual PCM packets to the API before a native conversation starts. A stale microphone is checked again after negotiation; a suspended AudioContext cannot trigger a greeting just because the server transport connected. The UI and connection status explain when a browser interaction/microphone permission is needed.
+- The host's former 20-second timeout interrupted native negotiation, which owns a 30-second transport timeout and a 25-second session-event wait. The host now allows 35 seconds including cleanup. It still requires the actual native `session.started` event, then rechecks AV before announcing readiness/greeting.
+- Fusion process/input failure after readiness now reconnects the voice path without repeating the greeting. The status endpoint distinguishes microphone arrival from recently accepted audio, with the current gate reason/source/lock. Worker rejection reasons distinguish missing/stale Visual evidence, owner mismatch, and an unlocked speaker from the underlying audio-mask verdict.
+
+## Evidence
+
+- **61 focused tests passed**, including built-app Chromium tests, matching/stale worker acknowledgment IDs, no greeting before microphone/AV readiness, a microphone stopping during negotiation, and recovery without duplicate greeting: [JUnit report](../../output/device-av-focused-tests.xml).
+- Frontend **21 tests**, build/type checking, oxlint/Prettier and changed Python Ruff checks passed.
+- Full suite scan: **302 passed, 6 failed** on stale UI selectors from the earlier cart redesign (heading capitalization, two progress buttons, and the removed edit label). These selectors were updated to the existing UI; the six cases passed on focused reruns. The full suite was not rerun after these selector updates. Two additional Fusion recovery cases are included in the 61 focused passes.
+- The running browser → API → Visual path was also exercised using a fake camera while forcing the page timer to 1000 ms. After source-transition samples, monitor FPS ranged about **9–13**, with track processing around **3–5 ms**. [Monitor samples](../../output/device-camera-live-monitor.json). This uses a synthetic camera, not the user's physical device.
+- Native handshake probe: one initial attempt timed out after **26.89 seconds**. The next traced attempt reached connected ICE/DTLS, an open data channel and `session.started` in **2.44 seconds**: [trace](../../output/native-readiness-probe.json). Intermittent upstream/network handshake failures remain unresolved; a successful probe is not evidence of universal connection stability.
+- An existing post-Fusion synthetic PCM fixture was replayed through the actual native input path. It connected in **2.8 seconds**, produced the user transcript `Bạn cho mình xem thực đơn cà phê`, and returned **159360 bytes** of output PCM. [Audio probe](../../output/native-audio-readiness-probe.json). It had no business tools and created no merchant order; it does not replace physical mic/speaker/PAD verification.
+
+The owned API and Visual processes were started because both were stopped. API 8080 and Visual 9877 are listening. Idle status remained `session_active=false`, `voice_ready=false`, `voice_prepared=false`; no idle native call was introduced. Existing browser tabs must reload the new JavaScript.
+
+## Self-evaluation
+
+Accuracy 4/5: deterministic failures and live transport/audio evidence captured, with synthetic versus physical scope explicit. Completeness 4/5: capture timing, readiness, mic freshness and Fusion recovery corrected; intermittent upstream handshake failure and physical-device recognition remain unverified. Clarity 4/5: microphone arrival is distinguished from accepted input. Actionability 4/5: deployed services and diagnostic endpoint available. Conciseness 4/5: existing media path retained.

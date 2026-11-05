@@ -1,0 +1,524 @@
+{
+  "voices": {
+    "default": {
+      "greeting": {
+        "voice": null,
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "c9c4e3f365da88bbc2047fd31b5b86af0f53637fcb8ea8e143f70fbbd70d8131",
+        "seconds": 2.68
+      },
+      "goodbye": {
+        "voice": null,
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "cfa64aa5529f71fe7e9701ca8f8eec27a39ebbdbba9caff3664a1b40b2b4c8dc",
+        "seconds": 2.62
+      }
+    },
+    "maple": {
+      "greeting": {
+        "voice": "maple",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "9d6c31c1aef0a16a48b5b8c3fbae0de1bf15f4120c176947926e85493234b04f",
+        "seconds": 3.24
+      },
+      "goodbye": {
+        "voice": "maple",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "680203205719302a1acd0f03b3d0f1b8851dad32432a57d3a918dd966deb01c1",
+        "seconds": 3.02
+      }
+    },
+    "rio": {
+      "greeting": {
+        "voice": "rio",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "b2fd8fa84df3da5552286e50f423f6f35ea8c44462a50008005807114eb1cfea",
+        "seconds": 2.88
+      },
+      "goodbye": {
+        "voice": "rio",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "0fe7578b0041a27110c7314f8e15cb5df8a50a77feee58a481da37a756f64bb5",
+        "seconds": 2.92
+      }
+    },
+    "cove": {
+      "greeting": {
+        "voice": "cove",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "4182cda1429635ecfbe2a8c77fa9a849a58e38441c6dfcde38211784fbd1a8e2",
+        "seconds": 2.48
+      },
+      "goodbye": {
+        "voice": "cove",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "79989379ff35f8e63f011f5536fdd297df520dbe900fb8bb721e7b2a87e7b457",
+        "seconds": 2.32
+      }
+    },
+    "juniper": {
+      "greeting": {
+        "voice": "juniper",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "5a15f008829a7a95c0aca2c1c17e84a75063ec54c51f8a6692c5640258192a29",
+        "seconds": 2.66
+      },
+      "goodbye": {
+        "voice": "juniper",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "70ef8e1746e711a9c67c8bdba176830da8863f9611f9afd5de57d805d1e7cae5",
+        "seconds": 2.14
+      }
+    },
+    "spruce": {
+      "greeting": {
+        "voice": "spruce",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "03258270c2f7a65cbe0fac79585a8550a8d27a145d2732c378186b816ede5c69",
+        "seconds": 3.32
+      },
+      "goodbye": {
+        "voice": "spruce",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "2ee9d4b431c3e7451bbe517cdbdeaec46e30791636e7967e4a3ddbdfdc293be4",
+        "seconds": 3.04
+      }
+    },
+    "ember": {
+      "greeting": {
+        "voice": "ember",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "8fe1b3a95b7e8ed0681d4d08780d8d7627aa9020950bc8a882eb93db91236a5c",
+        "seconds": 2.56
+      },
+      "goodbye": {
+        "voice": "ember",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "b2e8cc7cdfaf8b6f292ebcec31be19a2060650472fc6c75e425dd4d43a24a9fb",
+        "seconds": 2.8
+      }
+    },
+    "vale": {
+      "greeting": {
+        "voice": "vale",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "ca2acd5f169a2029e843025006343c1163d11ee89b4521367fb900b672a94bd3",
+        "seconds": 2.86
+      },
+      "goodbye": {
+        "voice": "vale",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "f434c37bc49e3ce35b0c5f809603dfe641df4e817d97188e39336e0b8a47aef7",
+        "seconds": 2.64
+      }
+    },
+    "breeze": {
+      "greeting": {
+        "voice": "breeze",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "dd692925cc686c45c9f0e9871f148cd527568f8543161edfeda7dc9be963bb5a",
+        "seconds": 3.32
+      },
+      "goodbye": {
+        "voice": "breeze",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "5cf2b74371705ad97e5ff2a6bd0f7c508f1261a31e71de4db006ecfa52245c62",
+        "seconds": 2.32
+      }
+    },
+    "arbor": {
+      "greeting": {
+        "voice": "arbor",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "4955d8459e95bdbf9246f06caec0f0317c9544c27dabec4f88572ba3bd488b6a",
+        "seconds": 2.66
+      },
+      "goodbye": {
+        "voice": "arbor",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "7f3100ed3b2ea5b45fcefdd55352bd7fa85ee2218071d8c2f52a6c9c3e38e556",
+        "seconds": 3.1
+      }
+    },
+    "sol": {
+      "greeting": {
+        "voice": "sol",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "9456090eeeb736cecb856c96e5d9297eaf53c01ac20c47a8b8ffc3c16266d3a9",
+        "seconds": 3.18
+      },
+      "goodbye": {
+        "voice": "sol",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "51e0c5ae5bc03be9f69952929985f7942a6ff2ea677db1a5bb4d86b6ddb9a0ec",
+        "seconds": 2.68
+      }
+    },
+    "aube": {
+      "greeting": {
+        "voice": "aube",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "d3bd8bb59769694b959e79d7188fa81bb85bb361b1f15ff0d2cf0de7251ebdca",
+        "seconds": 2.92
+      },
+      "goodbye": {
+        "voice": "aube",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "a425f7c170adad7dac2f6a923750b3ce2ba98ea040920b9b92e1032dc27f8443",
+        "seconds": 2.94
+      }
+    },
+    "bubbie": {
+      "greeting": {
+        "voice": "bubbie",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "2e1df75589932ee92f9ce31fbe25b8c3a3952982896ff5b036b43961d7eecb89",
+        "seconds": 2.96
+      },
+      "goodbye": {
+        "voice": "bubbie",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "5a912b5cda9c996d76fd21a9e7f29fb275e7145cb84479fef4fa5da93cada950",
+        "seconds": 2.96
+      }
+    },
+    "haetsal": {
+      "greeting": {
+        "voice": "haetsal",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "481489ead6295e54b01cc7a99a285966dfa9d1c650de1b783b94c660aa01728d",
+        "seconds": 3.0
+      },
+      "goodbye": {
+        "voice": "haetsal",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "057c128cb815d4db6b4f37c35042ad664bf451840ad9c2ef652c69747aee942f",
+        "seconds": 3.12
+      }
+    },
+    "hanul": {
+      "greeting": {
+        "voice": "hanul",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "84d506fff4ba01ec61d22a905c3ee07a5779d42443900d053009ecb799be0eea",
+        "seconds": 2.72
+      },
+      "goodbye": {
+        "voice": "hanul",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "9962979535ea82665ab7577fd0664807811763d23ee8fa673538366f2bdcdadf",
+        "seconds": 2.7
+      }
+    },
+    "himari": {
+      "greeting": {
+        "voice": "himari",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "3cded0244deffee4b56bdb23b32cb88e99a3ec397e5503daa8606e4c6f397317",
+        "seconds": 2.74
+      },
+      "goodbye": {
+        "voice": "himari",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "3445115f65b306debfa5d840beb17d28a440f3cc5bc4b0de78e54558de015f2b",
+        "seconds": 2.72
+      }
+    },
+    "leher": {
+      "greeting": {
+        "voice": "leher",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "ea84cfcf6f413f6617a94493567f6cb8c9bdbdcbf3c8120efdb6618ea7f35060",
+        "seconds": 2.84
+      },
+      "goodbye": {
+        "voice": "leher",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "9546436812ccfa493e34eb13ee2f5d4c26badc1011e5dd2ef83ed78214202759",
+        "seconds": 2.32
+      }
+    },
+    "miko": {
+      "greeting": {
+        "voice": "miko",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "c7ff20d1c2d93026e742f55e77d6ecbfa882e3440e13e10d5c4e3d3a27a5c5c3",
+        "seconds": 2.2
+      },
+      "goodbye": {
+        "voice": "miko",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "312c518c4d33d1aaf240c4b91f0a14c35ac4553f8d1ecd2bac2dfc8b29b3e42d",
+        "seconds": 2.62
+      }
+    },
+    "neer": {
+      "greeting": {
+        "voice": "neer",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "3a5c1e377695a0bcdc893771cb61027045abb646ec3f022beb2da4222ea773c2",
+        "seconds": 3.26
+      },
+      "goodbye": {
+        "voice": "neer",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "2325ccc646dcb0aa13d7534a558f113388c7f5048eb7f54980351c737b267999",
+        "seconds": 2.72
+      }
+    },
+    "porto": {},
+    "rindo": {
+      "greeting": {
+        "voice": "rindo",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "a75d399dce1ccc549508d3ec320eb9a6549c7943c866fff6e34f03333e10516a",
+        "seconds": 2.68
+      },
+      "goodbye": {
+        "voice": "rindo",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "3edf000ed967bb80115dc378766c89550fe9504bf171a685ca711151c306515d",
+        "seconds": 2.5
+      }
+    },
+    "rivage": {
+      "greeting": {
+        "voice": "rivage",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "45187f268ba82b3968bd932030c4784d8789aba17b36cfc564376d790bda7c8b",
+        "seconds": 2.76
+      },
+      "goodbye": {
+        "voice": "rivage",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "8aa8e573450dbba61c16b78a60f1a2483015754f2ab198b83285c5d3331db3eb",
+        "seconds": 2.7
+      }
+    },
+    "selva": {},
+    "sonna": {
+      "greeting": {
+        "voice": "sonna",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": " Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "60dcd70ada3ae6dfdfc00db88bb1a3361d23349cc884842db3a757c8bb035630",
+        "seconds": 3.06
+      },
+      "goodbye": {
+        "voice": "sonna",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": " Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "83da69688fc1f849cf03ae3fe4fa69c901d44c636d8563c420375c0aae9a8396",
+        "seconds": 3.14
+      }
+    },
+    "tinta": {
+      "greeting": {
+        "voice": "tinta",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "e4f7fe6f86b2d95fde1f0ef25785320af239b1f135f0d378a19ab7a7c04ac4c6",
+        "seconds": 2.82
+      },
+      "goodbye": {
+        "voice": "tinta",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "6531a393e6f4d3273d0b64d7fab4b1e9ca5b5a13ce426613f1316ebb8b5701db",
+        "seconds": 2.94
+      }
+    },
+    "viola": {
+      "greeting": {
+        "voice": "viola",
+        "version": "v3",
+        "text": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "native_transcript": "Chào bạn, Trend có thể giúp bạn chọn món gì?",
+        "sha256": "e73dcf094a69195b709f5743182c2bb01dfaa4ea2b8d06483333c71207afa35c",
+        "seconds": 3.18
+      },
+      "goodbye": {
+        "voice": "viola",
+        "version": "v3",
+        "text": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "native_transcript": "Tạm biệt bạn, hẹn gặp lại tại Trend Coffee.",
+        "sha256": "50fc99c62f2843604600669498a6093b59098ac4451f57b0ee622ac926b2ef03",
+        "seconds": 3.3
+      }
+    }
+  },
+  "renderer": "codex-cli 0.163.0",
+  "native_catalog": [
+    "juniper",
+    "maple",
+    "spruce",
+    "ember",
+    "vale",
+    "breeze",
+    "arbor",
+    "sol",
+    "cove",
+    "aube",
+    "bubbie",
+    "haetsal",
+    "hanul",
+    "himari",
+    "leher",
+    "miko",
+    "neer",
+    "porto",
+    "rindo",
+    "rio",
+    "rivage",
+    "selva",
+    "sonna",
+    "tinta",
+    "viola"
+  ],
+  "unavailable": {
+    "porto": {
+      "code": "forbidden",
+      "reason": "Voice session access denied."
+    },
+    "selva": {
+      "code": "forbidden",
+      "reason": "Voice session access denied."
+    }
+  }
+}

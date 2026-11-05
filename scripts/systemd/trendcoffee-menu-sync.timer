@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the Trend Coffee menu every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:00:00 Asia/Ho_Chi_Minh
+Persistent=true
+AccuracySec=1min
+Unit=trendcoffee-menu-sync.service
+
+[Install]
+WantedBy=timers.target

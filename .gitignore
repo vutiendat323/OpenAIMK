@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.env
+.runtime/
+dist/
+
+# Local environments, models and large artifacts
+node_modules/
+Audio/
+Visual/
+Metric3D/
+output/
+data/
+.codex/
+.agents/
+*.db
+*.db-wal
+*.db-shm
+*.log
+.DS_Store
