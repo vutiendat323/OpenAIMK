@@ -38,6 +38,22 @@ export class RtcCamera {
     await peer.setRemoteDescription({ type: 'answer', sdp: answer })
   }
 
+  /** The browser's own sender numbers, to tell a browser that stopped sending from a
+   *  server that stopped receiving (2026-11-05: 34 frames, then none). */
+  async readStats(report: (stats: Record<string, number | string>) => void) {
+    if (this.closed) return
+    const stats = await this.peer.getStats()
+    stats.forEach((entry: Record<string, unknown>) => {
+      if (entry.type !== 'outbound-rtp' || entry.kind !== 'video') return
+      const values: Record<string, number | string> = {}
+      for (const [key, value] of Object.entries(entry))
+        if (typeof value === 'number' && key !== 'timestamp' && key !== 'ssrc') values[key] = value
+      if (typeof entry.qualityLimitationReason === 'string')
+        values.qualityLimitationReason = entry.qualityLimitationReason
+      report(values)
+    })
+  }
+
   close() {
     this.closed = true
     this.peer.close()

@@ -55,6 +55,22 @@ BOUNDARY_TEXT = {
 
 
 SPEAKER_STOP_DELAY = 0.15
+# The browser's own numbers for the device camera's WebRTC sender (outbound-rtp video).
+BROWSER_CAMERA_STATS = (
+    "framesSent",
+    "framesEncoded",
+    "framesPerSecond",
+    "frameWidth",
+    "frameHeight",
+    "packetsSent",
+    "bytesSent",
+    "nackCount",
+    "pliCount",
+    "firCount",
+    "totalEncodeTime",
+    "qualityLimitationResolutionChanges",
+)
+CAMERA_LIMIT_REASONS = ("none", "cpu", "bandwidth", "other")
 BROWSER_SPEAKER_STATS = (
     "packetsReceived",
     "packetsLost",
@@ -588,6 +604,23 @@ class InteractionHost:
         self.camera_peer = camera
         self.audio_metrics["camera_transport"] = camera.metrics
         return {"sdp": answer}
+
+    async def _watch_camera(self, now):
+        """Drop a device camera connection whose video stopped; the browser reconnects it."""
+        camera = self.camera_peer
+        if camera is None or not camera.stalled(now):
+            return
+        browser = self.audio_metrics.get("browser_camera", {})
+        logging.getLogger(__name__).warning(
+            "Device camera stalled at %s after %s frames (browser sent %s); reconnecting it",
+            time.strftime("%H:%M:%S"),
+            camera.metrics.get("frames"),
+            browser.get("framesSent", "?"),
+        )
+        self.audio_metrics["camera_stalls"] = self.audio_metrics.get("camera_stalls", 0) + 1
+        await self._close_camera()
+        with contextlib.suppress(Exception):
+            await self.emit("camera_reset")
 
     async def _close_camera(self):
         camera, self.camera_peer = self.camera_peer, None
@@ -1601,6 +1634,18 @@ class InteractionHost:
             return await self._speaker_offer(message.get("sdp"))
         if kind == "camera_offer":
             return await self._camera_offer(message.get("sdp"))
+        if kind == "camera_stats":
+            stats = message.get("stats")
+            if isinstance(stats, dict):
+                numbers = {
+                    key: stats[key]
+                    for key in BROWSER_CAMERA_STATS
+                    if type(stats.get(key)) in (int, float)
+                }
+                if stats.get("qualityLimitationReason") in CAMERA_LIMIT_REASONS:
+                    numbers["qualityLimitationReason"] = stats["qualityLimitationReason"]
+                self.audio_metrics["browser_camera"] = numbers
+            return {}
         if kind == "speaker_stats":
             stats = message.get("stats")
             if isinstance(stats, dict):
@@ -1781,6 +1826,7 @@ class InteractionHost:
         while self.controller is not None:
             await asyncio.sleep(0.2)
             now = self.clock()
+            await self._watch_camera(now)
             if self.policy.tick(now) == "leave" and self.active:
                 await self.end("sensor_or_customer_left")
             if not self.active:

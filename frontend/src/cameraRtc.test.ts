@@ -24,6 +24,23 @@ class FakePeer {
   close() {
     this.closed = true
   }
+  async getStats() {
+    return new Map<string, Record<string, unknown>>([
+      ['a', { type: 'inbound-rtp', kind: 'video', framesDecoded: 9 }],
+      [
+        'b',
+        {
+          type: 'outbound-rtp',
+          kind: 'video',
+          framesSent: 34,
+          ssrc: 7,
+          timestamp: 1,
+          qualityLimitationReason: 'cpu',
+          mid: '0',
+        },
+      ],
+    ])
+  }
 }
 
 const track = { kind: 'video' } as MediaStreamTrack
@@ -84,4 +101,11 @@ it('waits for local candidates before sending the offer', async () => {
   peer.onicegatheringstatechange?.()
   await connecting
   expect(offered).toBe(true)
+})
+
+it('reports only the video sender numbers and its quality limit', async () => {
+  const { rtc } = camera()
+  const reports: Record<string, number | string>[] = []
+  await rtc.readStats((stats) => reports.push(stats))
+  expect(reports).toEqual([{ framesSent: 34, qualityLimitationReason: 'cpu' }])
 })

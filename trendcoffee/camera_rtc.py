@@ -23,6 +23,9 @@ MIN_INTERVAL = 1 / MAX_FPS - 0.005
 JPEG_QSCALE = 5  # fixed quality (lower is better); ~0.7 ms per 640x480 frame
 MAX_JPEG_BYTES = 256000  # the kiosk camera path accepts at most this size
 RECEIVING_WINDOW = 1.0  # seconds without a frame before the socket fallback resumes
+# A connection that stays up while its video stops (2026-11-05: 34 frames, then none for
+# minutes) is dropped after this long; the browser then reconnects it, socket JPEGs meanwhile.
+STALL_SECONDS = 2.0
 
 
 class CameraPeer:
@@ -36,6 +39,7 @@ class CameraPeer:
         self.encoder = None
         self.last_frame_at = None
         self.last_kept_at = None
+        self.track_at = None  # when the video track began to be read
         self.metrics = {
             "frames": 0,
             "forwarded": 0,
@@ -71,6 +75,14 @@ class CameraPeer:
             self.last_frame_at is not None and self.clock() - self.last_frame_at < RECEIVING_WINDOW
         )
 
+    def stalled(self, now):
+        """True while the video track is read but no frame arrived for STALL_SECONDS.
+
+        A track that ended (the browser closed it) is not a stall."""
+        since = self.last_frame_at if self.last_frame_at is not None else self.track_at
+        reading = self.reader is not None and not self.reader.done()
+        return reading and since is not None and now - since > STALL_SECONDS
+
     def encode(self, frame):
         if self.encoder is None:
             encoder = av.CodecContext.create("mjpeg", "w")
@@ -83,6 +95,7 @@ class CameraPeer:
 
     async def read(self, track):
         metrics = self.metrics
+        self.track_at = self.clock()
         with contextlib.suppress(MediaStreamError):
             while True:
                 frame = await track.recv()
