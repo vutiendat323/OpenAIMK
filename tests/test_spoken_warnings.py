@@ -135,3 +135,36 @@ def test_the_screen_asks_only_when_trend_cannot(svc):
         await host.close()
 
     asyncio.run(run())
+
+
+def test_a_warning_waits_until_trend_has_finished_speaking(svc):
+    """2026-11-05: a time warning cut "Dạ, hiểu rồi, mình sẽ..." mid-sentence."""
+
+    async def run():
+        host, events, start = await session(svc)
+        host.playing = True  # Trend is still saying its previous reply
+        await step(host, start + 121)
+        await asyncio.sleep(0.25)
+        assert host.codex.turns == [], "not while Trend is speaking"
+        host.playing = False
+        await asyncio.sleep(0.25)
+        ((_, text),) = host.codex.turns
+        assert text == idle_nudge_turn(*host.guest_situation(), 120)
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_a_warning_for_a_session_that_ended_meanwhile_is_dropped(svc):
+    async def run():
+        host, events, start = await session(svc)
+        host.playing = True
+        await step(host, start + 121)
+        await host.end("idle")
+        host.playing = False
+        await asyncio.sleep(0.25)
+        assert host.codex.turns == []
+        assert not any(e["type"] == "warning" for e in events)
+        await host.close()
+
+    asyncio.run(run())
