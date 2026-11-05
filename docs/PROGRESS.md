@@ -1352,6 +1352,12 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 - 461 backend tests pass (same 60 environment-only failures); focused voice suites stable over 5 runs; Ruff clean. Not checked with the real voice. Needs an API restart.
 - Follow-up (review): the cut log first relied on the server speaker's buffer, which exists only for Pet; in Avatar 3D (browser player, the default character) every cut went unlogged. A cut is now any guest turn that starts while `playing` is true (server speaker or browser playback report) or the server speaker still holds audio. `reply_cuts` = `{count, dropped_ms, unmeasured}`; `unmeasured` counts cuts whose lost duration is unknown (browser player). Test: `test_a_cut_while_the_browser_plays_trend_is_counted_without_a_duration` (red before).
 
+## A guest who stays after a session ended is welcomed again — 2026-11-05
+
+- Report: after a session ended for idleness, the guest still standing at the kiosk got no new session. Cause: an idle/time-limit/next-guest end blocks the guest's track until a camera frame shows nobody near; a guest who stays is blocked indefinitely. Evidence: after an API restart (which clears the block) a session opened at once for the same guest at 0.35 m.
+- User decision: a guest who stays is a new customer, with no pause (a first 10 s pause was rejected by the user). `BLOCK_SECONDS` is 0: after the end, the usual `enter_seconds` near opens a new session. A positive value would hold the same track back for that long. Watch for the new greeting overlapping the farewell clip; not measured.
+- `/api/kiosk/status` now has `presence`: the last camera decision (`stale` with age, `far`/`near` with distance and track, `blocked_same_guest` with seconds left, `enter`), counts per reason, and the blocked track. Tests: `tests/test_presence_diagnostics.py` (3). Not run with a real guest yet.
+
 ## Spoken warnings wait for Trend to finish — 2026-11-05
 
 - Evidence (rollout 11:12:43, kiosk log): with `session_limit_seconds` set to 120 by staff, the time warning fired at 11:13:43 while Trend was saying "Dạ, hiểu rồi, mình sẽ bật nhanh ngay đầu câu."; the warning turn replaced it ("Dạ, kiosk sắp hết giờ rồi…") and the guest heard only "Dạ, hiểu rồi, mình sẽ…". No guest-turn cut was logged at that moment.

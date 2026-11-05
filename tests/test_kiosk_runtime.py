@@ -709,7 +709,7 @@ def test_manual_start_with_fresh_empty_camera_ends_without_waiting_for_idle(svc)
 
 
 def test_explicit_restart_can_bind_the_same_customer_after_idle():
-    policy = PresencePolicy(enter_seconds=0)
+    policy = PresencePolicy(enter_seconds=0, block_seconds=10.0)
     assert policy.observe(observation(1, 100), 100, 100) == "enter"
     policy.reset(block=True)
     assert policy.observe(observation(2, 101), 101, 101) is None

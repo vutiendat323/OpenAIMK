@@ -218,6 +218,10 @@ def create_app(service=None, staff_token=None, semantic=None, kiosk_host=None):
             ),
             "audio_gate": kiosk_host.audio_gate if kiosk_host and kiosk_host.active else None,
             "audio_metrics": kiosk_host.audio_metrics if kiosk_host else {},
+            # Why the camera did or did not open a session (numbers only).
+            "presence": kiosk_host.policy.diagnostics()
+            if kiosk_host and hasattr(kiosk_host.policy, "diagnostics")
+            else None,
         }
 
     @app.get("/api/kiosk/timing")
