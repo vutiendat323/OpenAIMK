@@ -10,6 +10,16 @@ import shutil
 import tomllib
 from pathlib import Path
 
+# Codex notifications the kiosk receives for its own thread. `turn/started` tells it Codex
+# took up work, so a voice that promised but never delegated can be caught (2026-11-06).
+FORWARDED_EVENTS = (
+    "thread/realtime/transcript/done",
+    "thread/realtime/error",
+    "thread/realtime/closed",
+    "thread/realtime/outputAudio/delta",
+    "turn/started",
+)
+
 INSTRUCTIONS = """You serve Trend Coffee customers through the provided kiosk tools only.
 Speak Vietnamese unless the customer chooses another language.
 PAYMENT STATUS FIRST: if merchant-verified status/payment_status is paid, tell the
@@ -380,13 +390,7 @@ class CodexVoice:
                 if (
                     thread in self.callbacks
                     and not (thread in self.peers and method == "thread/realtime/transcript/done")
-                    and method
-                    in (
-                        "thread/realtime/transcript/done",
-                        "thread/realtime/error",
-                        "thread/realtime/closed",
-                        "thread/realtime/outputAudio/delta",
-                    )
+                    and method in FORWARDED_EVENTS
                 ):
                     await self.callbacks[thread][1](method, params)
         except (OSError, ValueError, asyncio.CancelledError):

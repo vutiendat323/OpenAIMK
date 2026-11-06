@@ -172,6 +172,26 @@ TAKEOVER_NOTE = (
 )
 
 
+# A promise to act ("mình ghi liền cho bạn") is not a result, but if no Codex turn follows,
+# the guest waits for nothing (2026-11-06: 16:07, 20:38, 20:44; the guest had to repeat).
+PROMISE = re.compile(
+    r"(làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra)\s*(ngay|liền)"
+    r"|để mình (làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra)"
+    r"|đang chờ hệ thống",
+    re.IGNORECASE,
+)
+PROMISE_TAKEOVER_NOTE = (
+    "Kiosk check: you promised to act on the guest's latest request but did not delegate it. "
+    "The kiosk is now running that request itself. Do not delegate it again and do not state "
+    "any result; wait for the result and relay it."
+)
+
+
+def promises(text):
+    """True when Trend says it is about to act on a request (an acknowledgement, not a result)."""
+    return bool(PROMISE.search(str(text)))
+
+
 def recovery_turn(request, history, *, payment=False):
     """The text of the Codex turn the kiosk starts for a request nobody delegated."""
     recent = "\n".join(f"{role}: {text}" for role, text in history)

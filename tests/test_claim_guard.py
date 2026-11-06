@@ -629,3 +629,111 @@ def test_the_kiosk_stops_a_reply_with_the_wrong_pickup_card(svc):
         await host.close()
 
     asyncio.run(run())
+
+
+# A (2026-11-06): Trend promised ("mình ghi liền cho bạn") and never handed the order to Codex
+# (16:07, 20:38, 20:44); the guest waited until repeating. The kiosk now runs it itself.
+REQUEST = "Cho mình một cà phê đen mang đi nha"
+PROMISE = "Dạ, một cà phê đen mang đi nè, mình ghi liền cho bạn."
+
+
+def test_promise_wording_is_recognised():
+    from trendcoffee.claim_guard import promises
+
+    for text in (
+        "Dạ, cà phê đen mang đi, mình làm ngay cho bạn",
+        "Dạ, một cà phê sữa mang đi nữa nha, mình gửi ngay cho bạn.",
+        PROMISE,
+        "Dạ, để mình lên đơn ngay cho bạn nhé.",
+        "Dạ, mình đang chờ hệ thống trả kết quả, bạn đợi mình một chút nha.",
+    ):
+        assert promises(text), text
+    for text in (
+        "Bạn muốn uống gì hôm nay?",
+        "Dạ, cảm ơn bạn, chúc bạn một ngày thật dễ thương nha.",
+        "Bạn quét QR trên màn hình để thanh toán nhé.",
+    ):
+        assert not promises(text), text
+
+
+async def promise_host(svc):
+    host, speaker, events, on_tool, on_event = await delegating_host(svc)
+    host.promise_wait = 0.05
+    await on_event(
+        "thread/realtime/transcript/done", {"role": "user", "text": REQUEST, "turnId": "u1"}
+    )
+    await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
+    return host, on_event
+
+
+async def promise(on_event, turn="a1"):
+    await on_event(
+        "thread/realtime/transcript/done", {"role": "assistant", "text": PROMISE, "turnId": turn}
+    )
+
+
+def test_a_promise_with_no_codex_turn_makes_the_kiosk_run_the_request(svc, caplog):
+    async def run():
+        host, on_event = await promise_host(svc)
+        with caplog.at_level("WARNING", logger="trendcoffee.kiosk"):
+            await promise(on_event)
+            await asyncio.sleep(0.2)
+        ((thread, text),) = host.codex.turns
+        assert thread == host.thread_id and REQUEST in text
+        assert host.audio_metrics["undelegated_promises"] == 1
+        assert "promised" in caplog.text
+        notes = [note for _, role, note in host.codex.notes if role == "developer"]
+        assert any("running" in note for note in notes)
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_a_promise_followed_by_a_codex_turn_is_left_alone(svc):
+    async def run():
+        host, on_event = await promise_host(svc)
+        await promise(on_event)
+        await on_event("turn/started", {"threadId": host.thread_id, "turn": {"id": "t1"}})
+        await asyncio.sleep(0.2)
+        assert host.codex.turns == []
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_a_codex_turn_just_before_the_guest_transcript_counts(svc):
+    """Codex often starts before the guest's transcript arrives (20:38:20 vs 20:38:21)."""
+
+    async def run():
+        host, _, _, _, on_event = await delegating_host(svc)
+        host.promise_wait = 0.05
+        await on_event("turn/started", {"threadId": host.thread_id, "turn": {"id": "t1"}})
+        await on_event(
+            "thread/realtime/transcript/done", {"role": "user", "text": REQUEST, "turnId": "u1"}
+        )
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
+        await promise(on_event)
+        await asyncio.sleep(0.2)
+        assert host.codex.turns == []
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_one_takeover_per_request(svc):
+    async def run():
+        host, on_event = await promise_host(svc)
+        await promise(on_event, "a1")
+        await asyncio.sleep(0.2)
+        await promise(on_event, "a2")
+        await asyncio.sleep(0.2)
+        assert len(host.codex.turns) == 1
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_codex_turn_starts_reach_the_kiosk():
+    from trendcoffee.codex_voice import FORWARDED_EVENTS
+
+    assert "turn/started" in FORWARDED_EVENTS
