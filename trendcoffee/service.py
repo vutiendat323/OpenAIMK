@@ -573,10 +573,20 @@ class Service:
         from .merchant import MerchantError
 
         try:
-            remote = self.merchant.create(order, {i["id"]: i for i in self.menu()})
+            catalog = {i["id"]: i for i in self.menu()}
+            hidden = getattr(self.merchant, "hidden_voucher", None)
+            voucher = hidden(order) if hidden else None
+            if voucher:
+                # Recorded before the POST: validation must know the merchant may discount it.
+                order = self._save_order(order, merchant={**order["merchant"], "voucher": voucher})
+                remote = self.merchant.create(order, catalog, voucher=voucher)
+            else:
+                remote = self.merchant.create(order, catalog)
             slug = self.merchant.reference(remote)
             order = self._save_order(
-                order, merchant={"state": "created", "order_slug": slug}, delivery="merchant_api"
+                order,
+                merchant={**order["merchant"], "state": "created", "order_slug": slug},
+                delivery="merchant_api",
             )
             if not all(key in remote for key in ("branch", "subtotal", "orderItems")):
                 remote = self.merchant.fetch(order)

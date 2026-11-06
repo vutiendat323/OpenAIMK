@@ -394,6 +394,14 @@ TOOLS = [
 ]
 
 
+def public_order(order):
+    """An order as Trend and the screen see it: the hidden voucher stays out (2026-11-06)."""
+    merchant = order.get("merchant")
+    if not isinstance(merchant, dict) or "voucher" not in merchant:
+        return order
+    return {**order, "merchant": {k: v for k, v in merchant.items() if k != "voucher"}}
+
+
 class InteractionHost:
     def __init__(
         self,
@@ -1582,7 +1590,7 @@ class InteractionHost:
                     "kiosk_fulfillment", {k: v for k, v in args.items() if k != "lines"}
                 )
             if not self.cart and self.submitted:
-                order = next(reversed(self.submitted.values()))
+                order = public_order(next(reversed(self.submitted.values())))
                 await self.emit("order", order=order)
                 return {
                     **order,
@@ -1617,6 +1625,7 @@ class InteractionHost:
             self.order_note = ""
             self._changed()
             await self.state()
+            order = public_order(order)
             await self.emit("order", order=order)
             return {
                 **order,
@@ -1648,7 +1657,8 @@ class InteractionHost:
             return result
         if name == "kiosk_progress":
             await self.emit("view", view="progress")
-            return self.service.progress(self.token)
+            progress = self.service.progress(self.token)
+            return {**progress, "orders": [public_order(o) for o in progress.get("orders", [])]}
         if name == "kiosk_knowledge":
             return {"results": self.service.search(str(args.get("query", ""))[:500])}
         if name == "kiosk_support":
