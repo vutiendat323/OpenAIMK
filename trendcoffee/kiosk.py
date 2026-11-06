@@ -22,8 +22,6 @@ from .claim_guard import (
     PAID,
     TAKEOVER_NOTE,
     UNBACKED_RESULT_NOTE,
-    wrong_card,
-    wrong_card_note,
     UNVERIFIED_PAID_NOTE,
     ClaimGuard,
     paid_note,
@@ -31,6 +29,8 @@ from .claim_guard import (
     recovery_turn,
     says_paid,
     spoken_items,
+    wrong_card,
+    wrong_card_note,
 )
 from .codex_voice import CodexVoice
 from .kiosk_timing import KioskTiming
