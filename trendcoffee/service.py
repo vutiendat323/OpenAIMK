@@ -35,6 +35,20 @@ def encode(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+# Pickup cards (user decisions 2026-11-06): every new order takes the next of 16 cards,
+# rotating 1..16; staff make the card vibrate by hand. No busy tracking.
+CARD_COUNT = 16
+
+
+def _next_card(db):
+    """The card after the latest numbered order, inside the caller's write transaction."""
+    row = db.execute(
+        "SELECT json_extract(data,'$.vibrating_card') FROM orders"
+        " WHERE json_extract(data,'$.vibrating_card') IS NOT NULL ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    return row[0] % CARD_COUNT + 1 if row else 1
+
+
 def timestamp(value):
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -488,6 +502,7 @@ class Service:
                 payment_status="unverified",
                 delivery="local_queue_only",
                 created_at=now_iso(),
+                vibrating_card=_next_card(db),
             )
             if self.merchant and quote.get("mode") == "merchant_api":
                 order["merchant"] = {"state": "creating"}
@@ -566,6 +581,15 @@ class Service:
             )
 
     def payment(self, token, order_id):
+        """The order's payment state, with its pickup card for the screen and Trend."""
+        result = self._payment(token, order_id)  # checks the order belongs to this session
+        with self.store.connect() as db:
+            row = db.execute(
+                "SELECT json_extract(data,'$.vibrating_card') FROM orders WHERE id=?", (order_id,)
+            ).fetchone()
+        return {**result, "vibrating_card": row[0] if row else None}
+
+    def _payment(self, token, order_id):
         with self.store.connect() as db:
             sid = self._session(db, token)
             row = db.execute(
