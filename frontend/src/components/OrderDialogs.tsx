@@ -164,6 +164,7 @@ export function CheckoutResult({
           orderId={order.id}
           initialPayment={order.payment}
           variant="checkout"
+          card={order.vibrating_card}
         />
       )}
       <section className="checkout-result-details" aria-labelledby="checkout-summary-title">

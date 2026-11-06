@@ -48,6 +48,7 @@ export interface Quote {
   notice: string
   expires_at: number
   mode?: 'merchant_api' | 'local_queue_only'
+  vibrating_card?: number
 }
 export interface Order extends Omit<Quote, 'confirmation_token' | 'expires_at'> {
   status: string
@@ -65,6 +66,7 @@ export interface Payment {
   status: string
   qr_image?: string | null
   payment_connected?: boolean
+  vibrating_card?: number | null
 }
 export interface Handoff {
   id: string
