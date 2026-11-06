@@ -29,6 +29,8 @@ from .claim_guard import (
     recovery_turn,
     says_paid,
     spoken_items,
+    wrong_card,
+    wrong_card_note,
 )
 from .codex_voice import CodexVoice
 from .kiosk_timing import KioskTiming
@@ -37,6 +39,7 @@ from .session_notices import (
     fallback_text,
     guest_situation,
     idle_nudge_turn,
+    qr_sentence,
     time_warning_turn,
 )
 from .speaker import SpeakerPeer
@@ -389,6 +392,14 @@ TOOLS = [
         ["reason"],
     ),
 ]
+
+
+def public_order(order):
+    """An order as Trend and the screen see it: the hidden voucher stays out (2026-11-06)."""
+    merchant = order.get("merchant")
+    if not isinstance(merchant, dict) or "voucher" not in merchant:
+        return order
+    return {**order, "merchant": {k: v for k, v in merchant.items() if k != "voucher"}}
 
 
 class InteractionHost:
@@ -869,6 +880,7 @@ class InteractionHost:
         reply_stopped = [False]
         paid_verified = [False]  # set only by a tool result that says paid
         paid_flagged = set()
+        card_flagged = set()  # replies already stopped for naming the wrong pickup card
         history = deque(maxlen=6)  # (role, text) of recent finished turns, for a recovery turn
         recovered = set()  # guest requests the kiosk already ran itself
 
@@ -908,6 +920,28 @@ class InteractionHost:
             if thread:
                 # Not awaited here: this event arrives from Codex's own reader loop.
                 task = asyncio.create_task(recover())
+                self.cleanup_tasks.add(task)
+                task.add_done_callback(self.cleanup_tasks.discard)
+
+        async def stop_wrong_card(card):
+            """Trend named a pickup card that is not the order's own: stop and correct it."""
+            reply_stopped[0] = True
+            if self.speaker is not None:
+                self.speaker.interrupt()
+            self.audio_metrics["wrong_card_claims"] = (
+                self.audio_metrics.get("wrong_card_claims", 0) + 1
+            )
+            logging.getLogger(__name__).warning(
+                "Trend named the wrong pickup card at %s (order card %s); reply stopped",
+                time.strftime("%H:%M:%S"),
+                card,
+            )
+            await self.emit("voice_turn", role="user")
+            thread = self.thread_id
+            if thread and hasattr(self.codex, "append_text"):
+                task = asyncio.create_task(
+                    self.codex.append_text(thread, "developer", wrong_card_note(card))
+                )
                 self.cleanup_tasks.add(task)
                 task.add_done_callback(self.cleanup_tasks.discard)
 
@@ -1048,6 +1082,13 @@ class InteractionHost:
                     # A tool may have run, but none reported the order as paid.
                     paid_flagged.add(str(turn_id))
                     await stop_unbacked_result(UNVERIFIED_PAID_NOTE, payment=True)
+                elif (
+                    role == "assistant"
+                    and str(turn_id) not in card_flagged
+                    and wrong_card(text, self._order_card())
+                ):
+                    card_flagged.add(str(turn_id))
+                    await stop_wrong_card(self._order_card())
                 await self.emit(
                     "transcript",
                     role=role,
@@ -1549,7 +1590,7 @@ class InteractionHost:
                     "kiosk_fulfillment", {k: v for k, v in args.items() if k != "lines"}
                 )
             if not self.cart and self.submitted:
-                order = next(reversed(self.submitted.values()))
+                order = public_order(next(reversed(self.submitted.values())))
                 await self.emit("order", order=order)
                 return {
                     **order,
@@ -1557,6 +1598,7 @@ class InteractionHost:
                         k: v for k, v in order.get("payment", {}).items() if k != "qr_image"
                     },
                     "qr_available": bool(order.get("payment", {}).get("qr_image")),
+                    **self._qr_reply(order.get("payment"), order.get("vibrating_card")),
                 }
             if not self.fulfillment:
                 raise KioskError("fulfillment_required")
@@ -1583,11 +1625,13 @@ class InteractionHost:
             self.order_note = ""
             self._changed()
             await self.state()
+            order = public_order(order)
             await self.emit("order", order=order)
             return {
                 **order,
                 "payment": {k: v for k, v in order.get("payment", {}).items() if k != "qr_image"},
                 "qr_available": bool(order.get("payment", {}).get("qr_image")),
+                **self._qr_reply(order.get("payment"), order.get("vibrating_card")),
             }
         if name == "kiosk_payment":
             orders = self.service.progress(self.token)["orders"]
@@ -1604,6 +1648,7 @@ class InteractionHost:
                 ),
                 "payment": {k: v for k, v in payment.items() if k != "qr_image"},
                 "qr_available": bool(payment.get("qr_image")),
+                **self._qr_reply(payment, payment.get("vibrating_card")),
                 "order_id": orders[0]["id"] if orders else None,
             }
             if not orders:
@@ -1612,12 +1657,25 @@ class InteractionHost:
             return result
         if name == "kiosk_progress":
             await self.emit("view", view="progress")
-            return self.service.progress(self.token)
+            progress = self.service.progress(self.token)
+            return {**progress, "orders": [public_order(o) for o in progress.get("orders", [])]}
         if name == "kiosk_knowledge":
             return {"results": self.service.search(str(args.get("query", ""))[:500])}
         if name == "kiosk_support":
             return self.service.handoff(self.token, str(args.get("reason", ""))[:1000])
         raise KioskError("tool_not_permitted", 403)
+
+    def _order_card(self):
+        """The pickup card of this guest's latest order, or None."""
+        order = next(reversed(self.submitted.values()), None) if self.submitted else None
+        return (order or {}).get("vibrating_card")
+
+    @staticmethod
+    def _qr_reply(payment, card):
+        """The exact sentence Trend says when this payment's QR is ready (names the card)."""
+        if not (payment or {}).get("qr_image"):
+            return {}
+        return {"qr_reply": qr_sentence(card)}
 
     async def command(self, message):
         kind = message.get("type")

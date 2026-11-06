@@ -11,6 +11,16 @@ The kiosk starts the turn; Codex's answer reaches the realtime voice like any ot
 
 QR_SENTENCE = "Bạn quét QR trên màn hình để thanh toán nhé."
 
+
+def qr_sentence(card):
+    """Trend's exact reply when the QR is ready; it names the order's pickup card (2026-11-06).
+
+    Orders created before pickup cards keep the original sentence."""
+    if not card:
+        return QR_SENTENCE
+    return f"Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số {card}."
+
+
 _NO_CHANGE = (
     "Never add, change, remove or order anything, and never place an order, unless the guest "
     "asks for it. Do not say the session will end."
@@ -54,7 +64,7 @@ _ASK = {
     ),
     "awaiting_payment": (
         "Call kiosk_payment once to refresh the real payment status. If it is still pending, "
-        f"say only: '{QR_SENTENCE}' If it is paid, tell them warmly in your own words. "
+        "say exactly the qr_reply it returns. If it is paid, tell them warmly in your own words. "
         "Otherwise relay the real status briefly."
     ),
     "paid": "Ask whether they would like anything else, or if you can help with anything.",

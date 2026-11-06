@@ -23,10 +23,39 @@ AI_ORDER_NOTICE = (
 )
 
 
+# With a pickup card (user decisions 2026-11-06) the notice names the card, and the table or
+# takeaway, so staff can match the order to the card they make vibrate.
+CARD_NOTICE = "Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách!"
+
+
+def card_notice(order):
+    card = "THẺ RUNG SỐ " + str(order["vibrating_card"])
+    if order.get("fulfillment") == "takeaway":
+        card += " · Mang đi"
+    elif order.get("table_label"):
+        card += " · Bàn " + str(order["table_label"])
+    return "AI ORDER\n" + card + "\n" + CARD_NOTICE
+
+
 def order_description(order, *, legacy=False):
     """The kiosk's merchant description; `legacy` is the form used before the notice."""
-    text = ("" if legacy else AI_ORDER_NOTICE + "\n") + "Kiosk " + order["id"]
+    if legacy:
+        notice = ""
+    elif order.get("vibrating_card"):
+        notice = card_notice(order) + "\n"
+    else:
+        notice = AI_ORDER_NOTICE + "\n"
+    text = notice + "Kiosk " + order["id"]
     return text + ("\n" + order["order_note"] if order.get("order_note") else "")
+
+
+# A hidden voucher on every order (user decision 2026-11-06): the shop's private voucher is
+# attached while usable and guests are not told. The merchant applies it only by slug (a real
+# probe: code "Testmon" was ignored, slug "2b155921ee" charged 31500 of 35000). The kiosk
+# accepts a merchant amount at most MAX_VOUCHER_PERCENT below the listed total, never above.
+HIDDEN_VOUCHER_CODE = "Testmon"
+MAX_VOUCHER_PERCENT = 10
+VOUCHER_CACHE_SECONDS = 60
 
 
 class MerchantError(ServiceError):
@@ -36,7 +65,9 @@ class MerchantError(ServiceError):
 
 
 def from_environment():
-    return MerchantClient() if os.environ.get("TREND_MERCHANT_ENABLED") == "1" else None
+    if os.environ.get("TREND_MERCHANT_ENABLED") != "1":
+        return None
+    return MerchantClient(voucher_code=HIDDEN_VOUCHER_CODE)
 
 
 def table_key(label):
@@ -45,8 +76,71 @@ def table_key(label):
 
 
 class MerchantClient:
-    def __init__(self, *, transport=None):
+    def __init__(self, *, transport=None, voucher_code=None):
         self.transport = transport
+        self.voucher_code = voucher_code  # the kiosk's own client sets HIDDEN_VOUCHER_CODE
+        self._voucher = (None, -VOUCHER_CACHE_SECONDS)  # (offer, looked up at)
+
+    def _voucher_offer(self):
+        if not self.voucher_code:
+            return None
+        offer, at = self._voucher
+        if time.monotonic() - at < VOUCHER_CACHE_SECONDS:
+            return offer
+        try:
+            offer = self._request("GET", "/voucher/specific/public?code=" + self.voucher_code)
+        except MerchantError:
+            offer = None
+        self._voucher = (offer if isinstance(offer, dict) else None, time.monotonic())
+        return self._voucher[0]
+
+    def hidden_voucher(self, order):
+        """The hidden voucher's slug when it can apply to this order, else None."""
+        offer = self._voucher_offer()
+        try:
+            if (
+                not offer
+                or offer.get("code") != self.voucher_code
+                or offer.get("isActive") is not True
+                or offer.get("type") != "percent_order"
+                or not 0 < offer.get("value", 0) <= MAX_VOUCHER_PERCENT
+                or not offer.get("remainingUsage", 0) > 0
+                or not timestamp(offer["startDate"]) <= time.time() <= timestamp(offer["endDate"])
+                or offer.get("minOrderValue", 0) > order["total_vnd"]
+                or "bank-transfer"
+                not in {m.get("paymentMethod") for m in offer.get("voucherPaymentMethods", [])}
+            ):
+                return None
+            eligible = {
+                variant.get("slug")
+                for entry in offer.get("voucherProducts", [])
+                for variant in (entry.get("product") or {}).get("variants", [])
+            }
+        except (AttributeError, KeyError, TypeError, ValueError):
+            return None
+        if any(line["item_id"] not in eligible for line in order["lines"]):
+            return None
+        slug = offer.get("slug")
+        return (
+            slug if isinstance(slug, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,100}", slug) else None
+        )
+
+    def payable(self, remote, order):
+        """What the guest pays: the listed total, or the merchant's total after our voucher."""
+        total = order["total_vnd"]
+        subtotal = remote.get("subtotal")
+        voucher = (order.get("merchant") or {}).get("voucher")
+        if type(subtotal) is not int or subtotal == total or not voucher:
+            return total
+        applied = remote.get("voucher")
+        if (
+            not isinstance(applied, dict)
+            or applied.get("slug") != voucher
+            or remote.get("originalSubtotal", total) != total
+            or not 0 < total - subtotal <= total * MAX_VOUCHER_PERCENT // 100
+        ):
+            raise MerchantError("merchant_order_mismatch")
+        return subtotal
 
     def _request(self, method, path, data=None):
         try:
@@ -132,7 +226,7 @@ class MerchantClient:
             "reservation_created": False,
         }
 
-    def create(self, order, catalog):
+    def create(self, order, catalog, voucher=None):
         table = ""
         if order["fulfillment"] == "at_table":
             tables = self.tables(order["table_label"])["tables"]
@@ -166,7 +260,7 @@ class MerchantClient:
                     }
                     for line in order["lines"]
                 ],
-                "voucher": None,
+                "voucher": voucher,
                 "description": order_description(order),
             },
         )
@@ -210,7 +304,7 @@ class MerchantClient:
         if (
             not branch_matches
             or type(remote.get("subtotal")) is not int
-            or remote["subtotal"] != order["total_vnd"]
+            or remote["subtotal"] != self.payable(remote, order)
             or actual != expected
         ):
             raise MerchantError("merchant_order_mismatch")
@@ -295,10 +389,11 @@ class MerchantClient:
             except ValueError:
                 raise MerchantError("merchant_invalid_response") from None
         expires = min(created_at, timestamp(order["created_at"])) + 900
+        amount = self.payable(remote, order)
         result = {
             "order_id": order["id"],
             "merchant_order_id": order["merchant"]["order_slug"],
-            "amount_vnd": order["total_vnd"],
+            "amount_vnd": amount,
             "expires_at": expires,
             "status": "pending",
             "qr_image": None,
@@ -314,16 +409,13 @@ class MerchantClient:
         if state in {"cancelled", "failed"} or payment.get("statusCode") == "cancelled":
             result["status"] = "cancelled"
         elif state == "paid" or payment.get("statusCode") == "completed":
-            if payment.get("amount") != order["total_vnd"]:
+            if payment.get("amount") != amount:
                 raise MerchantError("merchant_payment_mismatch")
             result["status"] = "paid"
         elif time.time() >= expires:
             result["status"] = "expired"
         elif payment.get("qrCode"):
-            if (
-                payment.get("amount") != order["total_vnd"]
-                or payment.get("paymentMethod") != "bank-transfer"
-            ):
+            if payment.get("amount") != amount or payment.get("paymentMethod") != "bank-transfer":
                 raise MerchantError("merchant_payment_mismatch")
             result["qr_image"] = self._image(payment["qrCode"])
         return result

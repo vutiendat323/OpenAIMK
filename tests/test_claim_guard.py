@@ -576,3 +576,56 @@ def test_reply_audio_the_stopped_speaker_drops_is_logged_once(svc, caplog):
         await host.close()
 
     asyncio.run(run())
+
+
+def test_a_reply_naming_another_pickup_card_is_spotted():
+    """2026-11-06 anti-goal: Trend must never name a card that is not the order's own."""
+    from trendcoffee.claim_guard import wrong_card
+
+    reply = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7."
+    assert wrong_card(reply, 4)
+    assert not wrong_card(reply, 7)
+    assert not wrong_card("Bạn quét QR trên màn hình để thanh toán nhé.", 4)
+    assert wrong_card(reply, None), "no carded order: no card may be named"
+    assert wrong_card("Thẻ rung số 12 của bạn nhé", 2)
+
+
+def test_the_kiosk_stops_a_reply_with_the_wrong_pickup_card(svc):
+    async def run():
+        host, speaker, _, on_tool, on_event = await voice_host(svc)
+        host.submitted = {"1": {"id": "o1", "vibrating_card": 4}}
+        original = host._tool
+
+        async def tool(name, args):
+            if name == "kiosk_payment":
+                return {"qr_available": True, "payment": {"status": "pending"}}
+            return await original(name, args)
+
+        host._tool = tool
+        await on_event(
+            "thread/realtime/transcript/done",
+            {"role": "user", "text": "Cho mình thanh toán đơn này nhé", "turnId": "u1"},
+        )
+        await on_tool({"tool": "kiosk_payment", "arguments": {}, "callId": "p1"})
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
+        speaker.calls.clear()
+        right = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 4."
+        await on_event(
+            "thread/realtime/transcript/delta",
+            {"role": "assistant", "delta": right, "turnId": "a1"},
+        )
+        assert "interrupt" not in speaker.calls
+        await on_event("thread/realtime/assistantTurn/started", {"turnId": "a2"})
+        speaker.calls.clear()
+        await on_event(
+            "thread/realtime/transcript/delta",
+            {"role": "assistant", "delta": right.replace("số 4", "số 7"), "turnId": "a2"},
+        )
+        assert speaker.calls == ["interrupt"]
+        assert host.audio_metrics["wrong_card_claims"] == 1
+        await asyncio.sleep(0.05)
+        notes = [note for _, role, note in host.codex.notes if role == "developer"]
+        assert any("số 4" in note for note in notes)
+        await host.close()
+
+    asyncio.run(run())

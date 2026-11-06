@@ -35,6 +35,26 @@ def encode(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+# Pickup cards (user decisions 2026-11-06): every new order takes one of 16 cards, rotating
+# 1..16; staff make the card vibrate by hand. The number moves on only past a PAID order: an
+# unpaid order, even one whose QR is still valid, leaves the number where it is, so the next
+# order gets the same card. Local-queue orders (no merchant payment) keep the number they got.
+CARD_COUNT = 16
+
+
+def _next_card(db):
+    """The card after the latest paid order, inside the caller's write transaction."""
+    rows = db.execute(
+        "SELECT data FROM orders WHERE json_extract(data,'$.vibrating_card') IS NOT NULL"
+        " ORDER BY rowid DESC"
+    )
+    for (data,) in rows:
+        order = json.loads(data)
+        if order.get("payment_status") == "paid" or "merchant" not in order:
+            return order["vibrating_card"] % CARD_COUNT + 1
+    return 1
+
+
 def timestamp(value):
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -488,6 +508,7 @@ class Service:
                 payment_status="unverified",
                 delivery="local_queue_only",
                 created_at=now_iso(),
+                vibrating_card=_next_card(db),
             )
             if self.merchant and quote.get("mode") == "merchant_api":
                 order["merchant"] = {"state": "creating"}
@@ -530,10 +551,20 @@ class Service:
         from .merchant import MerchantError
 
         try:
-            remote = self.merchant.create(order, {i["id"]: i for i in self.menu()})
+            catalog = {i["id"]: i for i in self.menu()}
+            hidden = getattr(self.merchant, "hidden_voucher", None)
+            voucher = hidden(order) if hidden else None
+            if voucher:
+                # Recorded before the POST: validation must know the merchant may discount it.
+                order = self._save_order(order, merchant={**order["merchant"], "voucher": voucher})
+                remote = self.merchant.create(order, catalog, voucher=voucher)
+            else:
+                remote = self.merchant.create(order, catalog)
             slug = self.merchant.reference(remote)
             order = self._save_order(
-                order, merchant={"state": "created", "order_slug": slug}, delivery="merchant_api"
+                order,
+                merchant={**order["merchant"], "state": "created", "order_slug": slug},
+                delivery="merchant_api",
             )
             if not all(key in remote for key in ("branch", "subtotal", "orderItems")):
                 remote = self.merchant.fetch(order)
@@ -566,6 +597,15 @@ class Service:
             )
 
     def payment(self, token, order_id):
+        """The order's payment state, with its pickup card for the screen and Trend."""
+        result = self._payment(token, order_id)  # checks the order belongs to this session
+        with self.store.connect() as db:
+            row = db.execute(
+                "SELECT json_extract(data,'$.vibrating_card') FROM orders WHERE id=?", (order_id,)
+            ).fetchone()
+        return {**result, "vibrating_card": row[0] if row else None}
+
+    def _payment(self, token, order_id):
         with self.store.connect() as db:
             sid = self._session(db, token)
             row = db.execute(

@@ -187,3 +187,67 @@ def test_the_prompt_asks_for_one_checkout_call_with_lines():
     flat = " ".join(INSTRUCTIONS.split())
     assert "call kiosk_checkout ONCE with lines=" in flat
     assert "Never checkout an older cart instead of adding the customer's newly named" in flat
+
+
+def test_qr_sentence_names_the_card():
+    """User decision 2026-11-06: exact sentence, with the order's real pickup card."""
+    from trendcoffee.session_notices import qr_sentence
+
+    assert qr_sentence(7) == (
+        "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7."
+    )
+    assert qr_sentence(None) == "Bạn quét QR trên màn hình để thanh toán nhé."
+
+
+def test_checkout_and_payment_results_carry_the_exact_qr_reply(catalog):
+    from trendcoffee.claim_guard import UNVERIFIED_PAID_NOTE
+    from trendcoffee.session_notices import qr_sentence
+
+    remote = {
+        "slug": "card-test",
+        "subtotal": 58000,
+        "status": "pending",
+        "orderItems": [{"variant": {"slug": "03d9fe8299"}, "quantity": 1}],
+        "payment": {
+            "qrCode": PNG,
+            "amount": 58000,
+            "paymentMethod": "bank-transfer",
+            "statusCode": "pending",
+        },
+    }
+
+    def merchant(request):
+        if request.method == "POST":
+            payload = json.loads(request.content)
+            remote.update(description=payload["description"], type=payload["type"])
+        return httpx.Response(200, json={"result": remote})
+
+    catalog.merchant = MerchantClient(transport=httpx.MockTransport(merchant))
+
+    async def run():
+        async def send(event):
+            pass
+
+        host = InteractionHost(catalog, codex=FakeCodex())
+        await host.attach(catalog.new_session(), send)
+        await host.begin(manual=True)
+        tool, _ = host.codex.callbacks[host.thread_id]
+        try:
+            await tool(
+                {
+                    "tool": "kiosk_cart",
+                    "arguments": {"action": "add", "item_id": "03d9fe8299", "quantity": 1},
+                }
+            )
+            order = await tool({"tool": "kiosk_checkout", "arguments": {"fulfillment": "takeaway"}})
+            assert order["qr_available"] and order["vibrating_card"] == 1
+            assert order["qr_reply"] == qr_sentence(1)
+            again = await tool({"tool": "kiosk_checkout", "arguments": {}})
+            assert again["qr_reply"] == qr_sentence(1)
+            payment = await tool({"tool": "kiosk_payment", "arguments": {}})
+            assert payment["qr_available"] and payment["qr_reply"] == qr_sentence(1)
+        finally:
+            await host.close()
+
+    asyncio.run(run())
+    assert "qr_reply" in UNVERIFIED_PAID_NOTE

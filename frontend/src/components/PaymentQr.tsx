@@ -2,6 +2,7 @@ import { usePreferences } from '../usePreferences'
 import { useEffect, useState } from 'react'
 import { api, money } from '../api'
 import type { Payment } from '../types'
+import { shownCard } from '../vibratingCard'
 import { Button } from './ui/button'
 
 const labels: Record<string, string> = {
@@ -22,11 +23,13 @@ export function PaymentQr({
   orderId,
   initialPayment,
   variant = 'default',
+  card,
 }: {
   token: string
   orderId?: string
   initialPayment?: Payment
   variant?: 'default' | 'checkout'
+  card?: number
 }) {
   const { t } = usePreferences()
   const [payment, setPayment] = useState<Payment | null>(initialPayment || null)
@@ -78,6 +81,7 @@ export function PaymentQr({
     ? Math.max(0, Math.ceil(payment.expires_at - now / 1000))
     : null
   const status = payment?.status === 'pending' && remaining === 0 ? 'expired' : payment?.status
+  const pickupCard = shownCard(card, payment, status ?? '')
   return (
     <section
       className={`payment-qr${status === 'order_required' ? ' payment-qr-empty' : ''}`}
@@ -86,6 +90,11 @@ export function PaymentQr({
       aria-live="polite"
     >
       <h3>{t(status === 'paid' ? 'Đã thanh toán' : 'Quét QR thanh toán')}</h3>
+      {pickupCard !== null && (
+        <div className="payment-card-number" aria-label={t('Thẻ rung số') + ' ' + pickupCard}>
+          {pickupCard}
+        </div>
+      )}
       {status === 'pending' && payment?.qr_image && (
         <>
           <img

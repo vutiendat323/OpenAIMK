@@ -1392,3 +1392,27 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 
 - Report: pressing Ctrl+Alt+K a second time did not show the keyboard. Chromium reproduction (fixture server): focus a field → keyboard opens → Ctrl+Alt+K hides it and stores `hidden` → Ctrl+Alt+K again stores `shown` but nothing appears, because the field is still focused and a focused field fires no new `focusin`; it appeared only after touching another field.
 - Change, test-first (`tests/test_keyboard_shortcut_browser.py`, red before): `VirtualKeyboard` checks the focused element when it mounts (the shortcut remounts it), so turning the keyboard on shows it for the field that already has focus. With no field focused it stays closed until a field is touched, as before. Frontend 68 tests, lint/format/typecheck clean, built.
+
+## Pickup cards (thẻ rung) on every order — 2026-11-06
+
+- User decisions (spec `docs/superpowers/specs/2026-11-06-vibrating-card-design.md`): the shop's 16 vibrating pickup cards are assigned by the kiosk, rotating 1→16→1 over all new orders (takeaway and dine-in), with no busy tracking; staff make the card vibrate by hand. The table is still chosen as before.
+- Numbering rule (user, after seeing cards 1, 2, 5–10, 12 used by unpaid orders while only 3, 4, 11 were paid): the number advances only past a paid order; an unpaid order's number is reused once its QR (900 s) has expired; a live QR or an order still being created keeps its number and the next order skips it. With that afternoon's data the next order gets 12.
+- `Service.submit` stores `vibrating_card` (`_next_card(db, now)`) inside its `BEGIN IMMEDIATE` transaction (persists across restarts, distinct across the API and MCP processes, stable on checkout retries); `Service.payment` returns it.
+- Merchant description: `AI ORDER / THẺ RUNG SỐ N · Bàn <table>` (or `· Mang đi`) `/ Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách! / Kiosk <id> / <note>`; orders without a card keep the previous text and still validate.
+- Printed invoice: no card header (user decision 2026-11-06, after a raster `THẺ RUNG SỐ N` header was built and reverted); the printer keeps the previous ASCII notice. The card reaches paper only if the merchant PDF prints the order description (not verified).
+- Trend: kiosk_checkout/kiosk_payment results carry `qr_reply` = “Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số N.”; both voice prompts, the claim-guard note and the idle nudge now point to it. The paid reply stays free-worded.
+- Kiosk: the payment panel shows the card number alone in large type (96 px); all other panel content unchanged. Not viewed in a browser (needs a merchant order).
+- Tests: `tests/test_vibrating_card.py` (11), voice checkout (+2), prompts/nudge updated; frontend `vibratingCard.test.ts` (3). Deploy needs the API **and** the Codex-launched `trendcoffee mcp` processes restarted (see 2026-11-04).
+
+## Hidden 10% voucher on every order — 2026-11-06
+
+- User decision: attach the shop's private voucher `Testmon` (10% `percent_order`, max 20 uses, 2026-11-06..11-11, bank transfer, listed products) to every merchant order while usable, so real guests pay 10% less; guests are not told (no screen, voice or tool mention).
+- Real probes (user-authorized real orders, Cà phê đen 35000, takeaway, not paid): voucher field `"Testmon"` was accepted but ignored (order a172f91b46, subtotal 35000); the voucher **slug** `2b155921ee` applied it (subtotal 31500, `originalSubtotal` 35000, `voucher.slug` echoed). End-to-end through the kiosk code on a copy of the database (order a0ab692ef9, card 12): the kiosk attached the slug, validated 31500 and showed the merchant QR for 31500. The payment-initiate call took longer than the 4 s client timeout once (`merchant_unreachable`); the merchant had created the payment and the next poll showed the QR.
+- `MerchantClient(voucher_code=...)` (set only by `from_environment`, i.e. the running kiosk): looks the voucher up (cached 60 s) and attaches its slug only if active, has uses left, is in its date window, is `percent_order` ≤ 10%, allows bank transfer, meets `minOrderValue`, and every cart item is a listed product; otherwise the order is placed at full price. The slug is recorded in `order.merchant.voucher` before the POST.
+- Money checks: `MerchantClient.payable` accepts a merchant subtotal below the listed total only when our voucher slug is echoed, `originalSubtotal` equals the listed total and the discount is at most 10%; anything else stays `merchant_order_mismatch`/`merchant_payment_mismatch`. QR and paid amounts are compared with that payable amount. Trend's tool results and the screen's order events drop `merchant.voucher` (`kiosk.public_order`).
+- Tests: `tests/test_hidden_voucher.py` (8). Three real test orders exist on the merchant (a172f91b46, the slug probe, a0ab692ef9); the user cancels them.
+
+## Pickup card: a live unpaid QR keeps the current number — 2026-11-06 20:45
+
+- User: "'QR còn hạn', still keep number current". Evening data: after paid 13, order 14 (QR still live) and then order 15 (skipped 14 because of that live QR). Now `_next_card(db)` is simply the latest paid (or local-queue) order's card + 1; unpaid orders never move the number, live QR or not. With that data the next order gets 14.
+- Accepted risk (user-visible only if it happens): a guest who leaves with a live QR and pays later shares the number with the next guest.

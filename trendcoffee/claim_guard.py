@@ -81,6 +81,28 @@ class ClaimGuard:
 
 
 # Sent to the realtime voice layer as a developer note when a result is stopped.
+# A pickup card Trend names must be the order's own (anti-goal, 2026-11-06): the guest
+# takes and waits for that card.
+SPOKEN_CARD = re.compile(r"thẻ rung\D{0,30}?số\s*(\d+)", re.IGNORECASE)
+
+
+def wrong_card(text, card):
+    """True when the reply names a pickup card other than the order's own card."""
+    return any(int(number) != card for number in SPOKEN_CARD.findall(str(text)))
+
+
+def wrong_card_note(card):
+    if not card:
+        return (
+            "Kiosk check: this guest's order has no pickup card. Do not name a card number; "
+            "correct yourself in one short sentence."
+        )
+    return (
+        f"Kiosk check: the pickup card you just named is wrong. This order's card is số {card}. "
+        "Correct it in one short sentence; never name another card number."
+    )
+
+
 UNBACKED_RESULT_NOTE = (
     "Kiosk check: no kiosk tool ran for the guest's latest request, so the result you "
     "just started to state did not happen and is not on screen. Do not state results "
@@ -129,7 +151,7 @@ PAID = re.compile(
 UNVERIFIED_PAID_NOTE = (
     "Kiosk check: this order is not verified as paid by any tool result. Never say it was "
     "paid. If the guest asked about payment, call kiosk_payment and relay its actual status; "
-    "for a pending QR say only: 'Bạn quét QR trên màn hình để thanh toán nhé.'"
+    "for a pending QR say only the qr_reply it returns (it names the pickup card)."
 )
 
 

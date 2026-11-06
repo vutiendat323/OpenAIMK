@@ -6494,3 +6494,11 @@ p {
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* The pickup card staff make vibrate (2026-11-06): the number alone, very large. */
+.payment-qr .payment-card-number {
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}

@@ -18,3 +18,6 @@ node_modules/
 *.db-shm
 *.log
 .DS_Store
+
+# Brainstorming mockups (local only)
+.superpowers/
