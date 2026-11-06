@@ -11,13 +11,6 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 AI_ORDER_NOTICE = b"AI ORDER,QUY KHACH VUI LONG DOI 15\nNHAN MON TAI QUAY NHE"
-# With a pickup card (2026-11-06) the header is the card alone, in Vietnamese with
-# diacritics. ESC/POS text mode here is ASCII, so it is rendered as a raster like the PDF.
-HEADER_FONT, HEADER_POINTS = "Noto-Sans-Bold", "56"
-
-
-def card_header(card: int) -> str:
-    return f"THẺ RUNG SỐ {card}"
 
 
 class CupsPrinter:
@@ -30,45 +23,17 @@ class CupsPrinter:
         self.width_dots = width_dots
         self._run = run or subprocess.run
 
-    def _command(self, args: list[str], *, utf8: bool = False):
+    def _command(self, args: list[str]):
         return self._run(
             args,
             check=True,
             capture_output=True,
             timeout=15,
-            # The card header's Vietnamese label needs a UTF-8 locale; other commands keep C.
-            env={**os.environ, "LC_ALL": "C.UTF-8" if utf8 else "C"},
+            env={**os.environ, "LC_ALL": "C"},
         )
 
-    def prepare(self, pdf: Path, directory: Path, card: int | None = None) -> Path:
-        """Rasterize every page of the official document, preserving its content.
-
-        A carded order's header is rendered first; a failed render raises, so the job is
-        retried rather than printed without the card."""
-        header = None
-        if card is not None:
-            header = directory / "header.pbm"
-            self._command(
-                [
-                    "magick",
-                    "-background",
-                    "white",
-                    "-fill",
-                    "black",
-                    "-font",
-                    HEADER_FONT,
-                    "-pointsize",
-                    HEADER_POINTS,
-                    f"label:{card_header(card)}",
-                    "-gravity",
-                    "center",
-                    "-extent",
-                    f"{self.width_dots}x",
-                    "-monochrome",
-                    f"pbm:{header}",
-                ],
-                utf8=True,
-            )
+    def prepare(self, pdf: Path, directory: Path) -> Path:
+        """Rasterize every page of the official document, preserving its content."""
         prefix = directory / "raster"
         self._command(
             [
@@ -90,38 +55,31 @@ class CupsPrinter:
         payload = directory / "invoice.escpos"
         with payload.open("wb") as target:
             target.write(b"\x1b@")
-            if header is None:
-                target.write(b"\x1bE\x01" + AI_ORDER_NOTICE + b"\n\n\x1bE\x00")
-            else:
-                self._raster(target, header)
+            target.write(b"\x1bE\x01" + AI_ORDER_NOTICE + b"\n\n\x1bE\x00")
             for page in pages:
-                self._raster(target, page)
+                with page.open("rb") as source:
+                    if source.readline().strip() != b"P4":
+                        raise ValueError("invalid_invoice_raster")
+                    dimensions = source.readline()
+                    while dimensions.startswith(b"#"):
+                        dimensions = source.readline()
+                    width, height = map(int, dimensions.split())
+                    if width != self.width_dots or not 0 < height <= 65535:
+                        raise ValueError("invalid_invoice_raster_dimensions")
+                    stride = (width + 7) // 8
+                    bitmap = source.read()
+                    if len(bitmap) != stride * height:
+                        raise ValueError("truncated_invoice_raster")
+                # Trim only the blank PDF tail, through the final black pixel's row.
+                ink_bytes = len(bitmap.rstrip(b"\x00"))
+                height = max(1, (ink_bytes + stride - 1) // stride)
+                # Small strips fit thermal printer buffers; PBM already uses 1=black.
+                for row in range(0, height, 256):
+                    rows = min(256, height - row)
+                    target.write(b"\x1dv0\x00" + struct.pack("<HH", stride, rows))
+                    target.write(bitmap[row * stride : (row + rows) * stride])
             target.write(b"\n\n\n\x1dV\x00")
         return payload
-
-    def _raster(self, target, page: Path) -> None:
-        """One PBM image as ESC/POS raster strips, trimmed of its blank tail."""
-        with page.open("rb") as source:
-            if source.readline().strip() != b"P4":
-                raise ValueError("invalid_invoice_raster")
-            dimensions = source.readline()
-            while dimensions.startswith(b"#"):
-                dimensions = source.readline()
-            width, height = map(int, dimensions.split())
-            if width != self.width_dots or not 0 < height <= 65535:
-                raise ValueError("invalid_invoice_raster_dimensions")
-            stride = (width + 7) // 8
-            bitmap = source.read()
-            if len(bitmap) != stride * height:
-                raise ValueError("truncated_invoice_raster")
-        # Trim only the blank tail, through the final black pixel's row.
-        ink_bytes = len(bitmap.rstrip(b"\x00"))
-        height = max(1, (ink_bytes + stride - 1) // stride)
-        # Small strips fit thermal printer buffers; PBM already uses 1=black.
-        for row in range(0, height, 256):
-            rows = min(256, height - row)
-            target.write(b"\x1dv0\x00" + struct.pack("<HH", stride, rows))
-            target.write(bitmap[row * stride : (row + rows) * stride])
 
     def hold(self, payload: Path, title: str) -> str:
         """Spool one held job. A missing acknowledgment may still have spooled it."""

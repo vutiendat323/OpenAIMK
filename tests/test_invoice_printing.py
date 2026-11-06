@@ -15,13 +15,11 @@ from trendcoffee.service import ServiceError
 class Printer:
     def __init__(self):
         self.holds = self.releases = 0
-        self.prepared_cards = []
         self.observed = "processing"
         self.uncertain = False
 
-    def prepare(self, pdf, directory, card=None):
+    def prepare(self, pdf, directory):
         assert pdf.read_bytes().startswith(b"%PDF-")
-        self.prepared_cards.append(card)
         return pdf
 
     def hold(self, payload, title):
@@ -357,12 +355,3 @@ def test_a_recent_unpaid_order_keeps_waiting(svc):
     make_old(svc, order, 10 * 60)
     svc.invoices.process_once(force=True)
     assert svc.invoice_status(token, order["id"])["state"] == "waiting"
-
-
-def test_the_invoice_worker_passes_the_order_card_to_the_printer(svc):
-    """2026-11-06: the printed header names the pickup card staff make vibrate."""
-    _, order, remote, printer, _ = setup(svc)
-    complete(remote)
-    svc.invoices.process_once(force=True)
-    assert printer.holds == 1
-    assert printer.prepared_cards == [order["vibrating_card"]] == [1]
