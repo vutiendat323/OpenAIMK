@@ -119,9 +119,10 @@ to a card and the guest knows which card is theirs.
   both get one.
 - The counter **persists across restarts**.
 - A retry of the same checkout keeps the same card.
-- Paid announcement *(my call, from the user's original request "voice notify card to
-  customer")*: when an order with a card is verified paid, Trend's free-worded paid reply also
-  mentions the card number.
+- Where the card appears (user, 2026-11-06, replacing my earlier proposal that Trend repeat
+  the card when payment is verified): **on the printed invoice header and in the order
+  information staff see, i.e. the merchant order description/note.** Trend says the card in
+  the QR sentence; the paid reply stays free-worded with no required card mention.
 - The big number appears on the kiosk **from when the QR is shown** and stays through paid
   *(my guess; the user did not object)*.
 - Payment panel *(my call; the user did not choose between keeping or removing the panel's
