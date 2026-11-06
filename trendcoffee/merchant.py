@@ -23,9 +23,29 @@ AI_ORDER_NOTICE = (
 )
 
 
+# With a pickup card (user decisions 2026-11-06) the notice names the card, and the table or
+# takeaway, so staff can match the order to the card they make vibrate.
+CARD_NOTICE = "Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách!"
+
+
+def card_notice(order):
+    card = "THẺ RUNG SỐ " + str(order["vibrating_card"])
+    if order.get("fulfillment") == "takeaway":
+        card += " · Mang đi"
+    elif order.get("table_label"):
+        card += " · Bàn " + str(order["table_label"])
+    return "AI ORDER\n" + card + "\n" + CARD_NOTICE
+
+
 def order_description(order, *, legacy=False):
     """The kiosk's merchant description; `legacy` is the form used before the notice."""
-    text = ("" if legacy else AI_ORDER_NOTICE + "\n") + "Kiosk " + order["id"]
+    if legacy:
+        notice = ""
+    elif order.get("vibrating_card"):
+        notice = card_notice(order) + "\n"
+    else:
+        notice = AI_ORDER_NOTICE + "\n"
+    text = notice + "Kiosk " + order["id"]
     return text + ("\n" + order["order_note"] if order.get("order_note") else "")
 
 

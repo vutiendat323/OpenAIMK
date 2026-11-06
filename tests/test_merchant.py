@@ -116,9 +116,8 @@ def test_merchant_receives_item_and_order_notes_and_echo_is_exact(svc):
     )
     assert body["orderItems"][0]["note"] == "less ice"
     assert body["description"] == (
-        "AI ORDER\n"
-        "Quý khách vui lòng đợi khoảng 15 phút và nhận món tại quầy thanh toán. "
-        "Cảm ơn quý khách!\n"
+        "AI ORDER\nTHẺ RUNG SỐ 1 · Mang đi\n"
+        "Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách!\n"
         f"Kiosk {order['id']}\ncall on arrival"
     )
     assert order["merchant"]["state"] == "created"
