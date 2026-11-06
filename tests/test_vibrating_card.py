@@ -127,3 +127,74 @@ def test_validate_accepts_a_carded_guest_order_echo(svc):
     echo = remote_order(description=body["description"], type="take-out")
     echo.pop("branch")
     MerchantClient.validate(svc.merchant, echo, placed)  # does not raise
+
+
+# User decision 2026-11-06 (later the same day): the number advances only past a PAID order.
+# An unpaid order gives its number back once its QR has expired; a live QR keeps it.
+NOW = 1_800_000_000.0
+
+
+def merchant_order(card, paid=False, expires_in=-60, created_ago=1000, qr=True):
+    order = {
+        "id": f"o{card}-{paid}-{expires_in}",
+        "vibrating_card": card,
+        "payment_status": "paid" if paid else "unverified",
+        "merchant": {"state": "created"},
+        "created_at": __import__("datetime")
+        .datetime.fromtimestamp(NOW - created_ago, __import__("datetime").UTC)
+        .isoformat()
+        .replace("+00:00", "Z"),
+    }
+    if qr:
+        order["payment"] = {"status": "paid" if paid else "pending", "expires_at": NOW + expires_in}
+    return order
+
+
+def next_card_after(svc, *orders):
+    from trendcoffee.service import _next_card
+
+    with svc.store.connect(write=True) as db:
+        for order in orders:
+            db.execute(
+                "INSERT INTO orders VALUES (?,?,?,?)", (order["id"], None, None, json.dumps(order))
+            )
+        return _next_card(db, NOW)
+
+
+def test_the_afternoon_of_2026_11_06_gives_unpaid_numbers_back(svc):
+    """Paid 3, 4 and 11; every other order's QR expired unpaid -> the next order gets 12."""
+    paid = {3, 4, 11}
+    orders = [merchant_order(card, paid=card in paid) for card in range(1, 13)]
+    assert next_card_after(svc, *orders) == 12
+
+
+def test_a_paid_order_moves_the_number_on(svc):
+    assert next_card_after(svc, merchant_order(7, paid=True)) == 8
+
+
+def test_a_skipped_order_gives_its_number_to_the_next_guest(svc):
+    assert next_card_after(svc, merchant_order(6, paid=True), merchant_order(7)) == 7
+
+
+def test_a_live_qr_keeps_its_number(svc):
+    live = merchant_order(7, expires_in=300)
+    assert next_card_after(svc, merchant_order(6, paid=True), live) == 8
+
+
+def test_an_order_still_waiting_for_its_qr_keeps_its_number(svc):
+    creating = merchant_order(7, created_ago=20, qr=False)
+    assert next_card_after(svc, merchant_order(6, paid=True), creating) == 8
+
+
+def test_an_old_order_that_never_got_a_qr_gives_its_number_back(svc):
+    stale = merchant_order(7, created_ago=2000, qr=False)
+    assert next_card_after(svc, merchant_order(6, paid=True), stale) == 7
+
+
+def test_after_card_sixteen_comes_one(svc):
+    assert next_card_after(svc, merchant_order(16, paid=True)) == 1
+
+
+def test_every_card_held_still_returns_a_card(svc):
+    held = [merchant_order(card, expires_in=300) for card in range(1, 17)]
+    assert next_card_after(svc, *held) in range(1, 17)
