@@ -1,6 +1,6 @@
 # Vibrating pickup cards for dine-in orders — design
 
-Date: 2026-11-06. Status: agreed with the user in conversation (updated after the builder check); awaiting approval of this document.
+Date: 2026-11-06. Status: approved 2026-11-06. **Amended after implementation:** the user dropped the printed card header (decision 5a below is withdrawn; the printer keeps its previous header). The card is in the merchant order description, on the kiosk and in Trend's QR sentence.
 
 ## Intent
 
