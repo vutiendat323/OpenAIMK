@@ -37,6 +37,7 @@ from .session_notices import (
     fallback_text,
     guest_situation,
     idle_nudge_turn,
+    qr_sentence,
     time_warning_turn,
 )
 from .speaker import SpeakerPeer
@@ -1557,6 +1558,7 @@ class InteractionHost:
                         k: v for k, v in order.get("payment", {}).items() if k != "qr_image"
                     },
                     "qr_available": bool(order.get("payment", {}).get("qr_image")),
+                    **self._qr_reply(order.get("payment"), order.get("vibrating_card")),
                 }
             if not self.fulfillment:
                 raise KioskError("fulfillment_required")
@@ -1588,6 +1590,7 @@ class InteractionHost:
                 **order,
                 "payment": {k: v for k, v in order.get("payment", {}).items() if k != "qr_image"},
                 "qr_available": bool(order.get("payment", {}).get("qr_image")),
+                **self._qr_reply(order.get("payment"), order.get("vibrating_card")),
             }
         if name == "kiosk_payment":
             orders = self.service.progress(self.token)["orders"]
@@ -1604,6 +1607,7 @@ class InteractionHost:
                 ),
                 "payment": {k: v for k, v in payment.items() if k != "qr_image"},
                 "qr_available": bool(payment.get("qr_image")),
+                **self._qr_reply(payment, payment.get("vibrating_card")),
                 "order_id": orders[0]["id"] if orders else None,
             }
             if not orders:
@@ -1618,6 +1622,13 @@ class InteractionHost:
         if name == "kiosk_support":
             return self.service.handoff(self.token, str(args.get("reason", ""))[:1000])
         raise KioskError("tool_not_permitted", 403)
+
+    @staticmethod
+    def _qr_reply(payment, card):
+        """The exact sentence Trend says when this payment's QR is ready (names the card)."""
+        if not (payment or {}).get("qr_image"):
+            return {}
+        return {"qr_reply": qr_sentence(card)}
 
     async def command(self, message):
         kind = message.get("type")

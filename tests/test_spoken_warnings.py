@@ -10,7 +10,6 @@ import asyncio
 from test_claim_guard import delegating_host
 
 from trendcoffee.session_notices import (
-    QR_SENTENCE,
     guest_situation,
     idle_nudge_turn,
     time_warning_turn,
@@ -57,7 +56,7 @@ def test_each_situation_asks_its_own_question_and_changes_nothing():
         assert ask in text and "about 120 seconds" in text and "own words" in text
         assert "Never add, change, remove or order anything" in text
         assert "Do not say the session will end" in text
-    assert QR_SENTENCE in idle_nudge_turn("awaiting_payment", "", 120)
+    assert "exactly the qr_reply" in idle_nudge_turn("awaiting_payment", "", 120)
     assert "action=view" in idle_nudge_turn("cart", "", 120)
 
 

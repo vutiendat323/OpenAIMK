@@ -129,7 +129,7 @@ PAID = re.compile(
 UNVERIFIED_PAID_NOTE = (
     "Kiosk check: this order is not verified as paid by any tool result. Never say it was "
     "paid. If the guest asked about payment, call kiosk_payment and relay its actual status; "
-    "for a pending QR say only: 'Bạn quét QR trên màn hình để thanh toán nhé.'"
+    "for a pending QR say only the qr_reply it returns (it names the pickup card)."
 )
 
 

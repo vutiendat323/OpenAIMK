@@ -4,13 +4,16 @@ import re
 
 from trendcoffee.codex_voice import INSTRUCTIONS, VOICE_INSTRUCTIONS
 
-QR_LINE = "Bạn quét QR trên màn hình để thanh toán nhé."
+QR_LINE = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7."
 PAID_LINE = "Đơn đã được thanh toán."
 
 
 def test_exact_payment_sentences_stay_exact_in_both_prompts():
+    """2026-11-06: the QR sentence names the pickup card; the tool gives it as qr_reply."""
     for prompt in (INSTRUCTIONS, VOICE_INSTRUCTIONS):
         assert QR_LINE in prompt
+        assert "qr_reply" in prompt
+        assert "'Bạn quét QR trên màn hình để thanh toán nhé.'" not in prompt
 
 
 def test_the_paid_result_is_worded_naturally_not_a_fixed_sentence():
