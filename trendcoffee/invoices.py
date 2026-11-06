@@ -137,7 +137,7 @@ class InvoicePrinter:
                 directory = Path(directory)
                 pdf = directory / "invoice.pdf"
                 pdf.write_bytes(content)
-                payload = self.printer.prepare(pdf, directory)
+                payload = self.printer.prepare(pdf, directory, card=order.get("vibrating_card"))
                 if self.stopping.is_set():
                     self._change(oid, stage, "waiting")
                     return
