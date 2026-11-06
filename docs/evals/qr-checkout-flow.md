@@ -4,6 +4,10 @@ Customer request: stop repeated sales questions and confirmations; when the drin
 and fulfillment are known, place the correct cart and show the bank-payment QR.
 A ready QR should produce only “Bạn quét QR trên màn hình để thanh toán nhé.”
 
+Update 2026-11-06 (user decision): every new order has a pickup card 1–16, and the exact
+sentence names it: “Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số N.”
+The kiosk tools return it as `qr_reply`; orders made before cards keep the sentence above.
+
 ## Findings and changes
 
 - The supplied historical Latte trace searched the catalog, then checked out

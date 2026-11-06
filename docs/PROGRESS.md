@@ -1392,3 +1392,13 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 
 - Report: pressing Ctrl+Alt+K a second time did not show the keyboard. Chromium reproduction (fixture server): focus a field → keyboard opens → Ctrl+Alt+K hides it and stores `hidden` → Ctrl+Alt+K again stores `shown` but nothing appears, because the field is still focused and a focused field fires no new `focusin`; it appeared only after touching another field.
 - Change, test-first (`tests/test_keyboard_shortcut_browser.py`, red before): `VirtualKeyboard` checks the focused element when it mounts (the shortcut remounts it), so turning the keyboard on shows it for the field that already has focus. With no field focused it stays closed until a field is touched, as before. Frontend 68 tests, lint/format/typecheck clean, built.
+
+## Pickup cards (thẻ rung) on every order — 2026-11-06
+
+- User decisions (spec `docs/superpowers/specs/2026-11-06-vibrating-card-design.md`): the shop's 16 vibrating pickup cards are assigned by the kiosk, rotating 1→16→1 over all new orders (takeaway and dine-in), with no busy tracking; staff make the card vibrate by hand. The table is still chosen as before.
+- `Service.submit` stores `vibrating_card` from the latest numbered order inside its `BEGIN IMMEDIATE` transaction (persists across restarts, distinct across the API and MCP processes, stable on checkout retries); `Service.payment` returns it.
+- Merchant description: `AI ORDER / THẺ RUNG SỐ N · Bàn <table>` (or `· Mang đi`) `/ Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách! / Kiosk <id> / <note>`; orders without a card keep the previous text and still validate.
+- Printed header: `THẺ RUNG SỐ N` with diacritics, rendered by ImageMagick (`magick label:`, Noto Sans Bold 56 pt, `LC_ALL=C.UTF-8`) to a 576-dot PBM and printed as raster before the merchant PDF; a failed render raises so the job retries instead of printing without the card. Preview (no print job) rendered correctly. Not yet checked on paper.
+- Trend: kiosk_checkout/kiosk_payment results carry `qr_reply` = “Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số N.”; both voice prompts, the claim-guard note and the idle nudge now point to it. The paid reply stays free-worded.
+- Kiosk: the payment panel shows the card number alone in large type (96 px); all other panel content unchanged. Not viewed in a browser (needs a merchant order).
+- Tests: `tests/test_vibrating_card.py` (11), printer (+3), invoice worker (+1), voice checkout (+2), prompts/nudge updated; frontend `vibratingCard.test.ts` (3). Deploy needs the API **and** the Codex-launched `trendcoffee mcp` processes restarted (see 2026-11-04).
