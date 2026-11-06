@@ -20,6 +20,7 @@ def qr_sentence(card):
         return QR_SENTENCE
     return f"Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số {card}."
 
+
 _NO_CHANGE = (
     "Never add, change, remove or order anything, and never place an order, unless the guest "
     "asks for it. Do not say the session will end."
