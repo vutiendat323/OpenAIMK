@@ -44,7 +44,7 @@
 - Voice tone (updated 2026-11-03): warm, friendly-barista tone with light emotion in Vietnamese;
   2–3 short sentences (~40 words max) for conversation/suggestions; 1–2 friendly sentences (~25 words)
   after tool results; acknowledgment remains 4–8 words. Locked rules remain: exact QR payment sentence
-  ('Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số N.' with the order's pickup
+  ('Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số N.' with the order's pickup
   card, from the tool's `qr_reply`; user decision 2026-11-06; orders without a card keep
   'Bạn quét QR trên màn hình để thanh toán nhé.'). The paid result is NOT a fixed sentence (user decision
   2026-11-05): Trend words it naturally (1–2 friendly sentences, may mention the order) only after a
@@ -78,7 +78,7 @@
   Explicit “chọn giúp/chọn cho mình ... mang đi” authorizes selecting a fitting real item
   and placing it without a second confirmation. Advice-only/view-only stays read-only.
   When the requested order has a pending QR, final speech is only the tool's `qr_reply`
-  (“Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số N.”). Verified paid status
+  (“Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số N.”). Verified paid status
   gets a paid answer. Pickup cards: every new order gets card 1–16, rotating, advancing only past a paid order (an unpaid order, even with a live QR, leaves the number for the next order); it is in the merchant
   order description (no card header on the printed invoice, user decision 2026-11-06); see `docs/superpowers/specs/2026-11-06-vibrating-card-design.md`.
   See `docs/evals/qr-checkout-flow.md` for the payment contract and fixture evidence.

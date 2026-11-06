@@ -1416,3 +1416,28 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 
 - User: "'QR còn hạn', still keep number current". Evening data: after paid 13, order 14 (QR still live) and then order 15 (skipped 14 because of that live QR). Now `_next_card(db)` is simply the latest paid (or local-queue) order's card + 1; unpaid orders never move the number, live QR or not. With that data the next order gets 14.
 - Accepted risk (user-visible only if it happens): a guest who leaves with a live QR and pays later shares the number with the next guest.
+
+## Voice latency: undelegated promises taken over; merchant steps timed — 2026-11-06 21:00
+
+- Analysis of 109 Codex turns and 47 checkouts (2026-11-05/06 kiosk rollouts): Codex time to first token median 2.0 s (p90 3.9), turn start → first tool 2.8 s (p90 5.1), whole turn 6.8 s (p90 12.1, max 23.9); `kiosk_checkout` 2.9 s median (p90 4.7, max 10.5, all merchant calls); menu/cart/progress ≈ 0 s, `kiosk_payment` 0.3 s. A typical "một cà phê đen mang đi" took ≈12–15 s from the guest to the spoken QR sentence. Machine resources were idle (17 GB RAM free, load 0.1/20 cores, GPU 2%).
+- Worst cause: the realtime voice promised ("mình làm ngay / gửi ngay / ghi liền", "đang chờ hệ thống") without delegating (16:07, 20:38, 20:44); guests waited until they repeated (20:38: >25 s, then a false "waiting for the system"). A: `codex_voice.FORWARDED_EVENTS` now includes `turn/started`; when Trend's finished reply matches `claim_guard.PROMISE` and no Codex turn/tool followed the guest's latest request (Codex may start up to 3 s before the transcript), the kiosk waits `PROMISE_WAIT` (3 s), runs the request itself (`recovery_turn`, once per request), tells the voice (`PROMISE_TAKEOVER_NOTE`), logs "Trend promised … handed nothing to Codex" and counts `audio_metrics.undelegated_promises`.
+- C: every merchant checkout logs `Merchant checkout at HH:MM:SS took N s (<outcome>): voucher …, create …, fetch …, payment …, initiate …` to find the slow merchant step (the payment-initiate call once exceeded the 4 s client timeout).
+- Also found, not changed yet (B): each Codex turn carries 17–19k input tokens, including ~26k chars of unused multi-agent tools, the repo's coding `AGENTS.md` (Codex runs with the repo as cwd) and multi-agent role text; the first turn per guest is uncached.
+- Tests: `tests/test_claim_guard.py` +6, `tests/test_merchant_timing.py` (2); backend 564 passed (13 environment-only collection errors).
+
+## Takeover notes cover only the one request — 2026-11-06 21:20
+
+- Why Trend promised without delegating: (1) the realtime voice sometimes speaks its acknowledgement and never emits the delegation (16:06:22, the first request of a session, no kiosk note before it); (2) our own note after a takeover — "Do not delegate it again … wait for the result and relay it" — was applied to every later request: at 20:38:27 the claim guard took over, at 20:38:42 a new order got "mình gửi ngay" with no delegation, at 20:39:17 Trend said "mình đang chờ hệ thống trả kết quả", and at 20:44:06 again in the same session.
+- `claim_guard.takeover_note(request, promise=False)` replaces `TAKEOVER_NOTE`/`PROMISE_TAKEOVER_NOTE`: it quotes the guest's request, says not to delegate *that same request* again, and ends "This applies only to that request: delegate every new guest request to Codex as usual, right away." Used by the unbacked-result and promise takeovers. Tests +3 (one old assertion reworded); backend 567 passed.
+
+## "thẻ rung" → "thẻ" — 2026-11-06 21:35
+
+- User: the noun "thẻ rung" is just "thẻ". QR sentence is now "Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số N." (`session_notices.qr_sentence`, both voice prompts), the merchant description line is "THẺ SỐ N · Bàn <table>" / "· Mang đi", the kiosk label is "Thẻ số" (en "Card number"). "Khi thẻ rung, mời quý khách đến quầy nhận món…" keeps "rung" as the verb (the card vibrates).
+- `merchant.order_description(order, old_wording=True)` rebuilds the previous "THẺ RUNG SỐ N" description, and `validate` accepts it, so orders already on the merchant (including unpaid ones) keep validating. `claim_guard.SPOKEN_CARD` spots a wrong number in either wording. Older entries above keep the old wording as history.
+- Tests: `test_orders_made_with_the_old_card_wording_still_validate` (+1); wording updated in 5 test files; backend and frontend suites green.
+
+## Bill note (merchant description) as one readable paragraph — 2026-11-06 21:55
+
+- User, after seeing a printed bill: the "Ghi chú" printed as `AI ORDER THẺ RUNG SỐ 3 · Mang Đi Khi Thẻ Rung, Mời Quý Khách Đến Quầy Nhận Món. Cảm Ơn Quý Khách! Kiosk 556aef…`. The merchant prints the description as ONE paragraph (line breaks dropped, each word capitalised), so the two-line form ran together and the card was hard to find. Format it, and word it so the guest understands.
+- New description (`merchant.order_description`): `THẺ SỐ 3 - Mang đi. Khi thẻ rung, mời bạn đến quầy nhận món. Cảm ơn bạn! [Ghi chú của khách: <note>.] (AI ORDER - Kiosk <id>)` (dine-in: `THẺ SỐ 7 - Bàn 05.`). My calls: card and place first, "bạn" instead of "quý khách", the guest's note in its own labelled sentence, the technical tag (AI ORDER, kiosk id) last in brackets. Printed it reads `Thẻ Số 3 - Mang Đi. Khi Thẻ Rung, Mời Bạn Đến Quầy Nhận Món. Cảm Ơn Bạn! (Ai Order - Kiosk 556…)`.
+- Orders already on the merchant keep their description: `validate` accepts the no-card notice, "THẺ RUNG SỐ N" and the two-line "AI ORDER / THẺ SỐ N" forms (test `test_orders_already_on_the_merchant_keep_validating_in_every_earlier_wording`). Needs the API restart; no `trendcoffee mcp` process is running.

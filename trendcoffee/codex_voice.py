@@ -10,6 +10,16 @@ import shutil
 import tomllib
 from pathlib import Path
 
+# Codex notifications the kiosk receives for its own thread. `turn/started` tells it Codex
+# took up work, so a voice that promised but never delegated can be caught (2026-11-06).
+FORWARDED_EVENTS = (
+    "thread/realtime/transcript/done",
+    "thread/realtime/error",
+    "thread/realtime/closed",
+    "thread/realtime/outputAudio/delta",
+    "turn/started",
+)
+
 INSTRUCTIONS = """You serve Trend Coffee customers through the provided kiosk tools only.
 Speak Vietnamese unless the customer chooses another language.
 PAYMENT STATUS FIRST: if merchant-verified status/payment_status is paid, tell the
@@ -19,7 +29,7 @@ Vary the wording. Do not create another order or request another payment.
 QR PAYMENT RULE OVERRIDES OTHER REPLY RULES: for pending payment, when a tool returns qr_available=true
 for the requested order/payment, your ENTIRE final reply must be exactly that tool
 result's qr_reply, which names the order's pickup card, e.g.
-'Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7.' Copy it
+'Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số 7.' Copy it
 character for character, never another card number. No preamble, summary or question.
 Speak like a warm, friendly barista: natural Vietnamese, light emotion (pleased,
 curious, encouraging), never stiff or robotic, and vary your wording between turns.
@@ -155,7 +165,7 @@ already asked you to choose an item and gave fulfillment, do not ask them to
 confirm your suggestion; Codex must select, add and show the real payment QR.
 For checkout/payment, keep the acknowledgement to a few words (e.g. 'Dạ, có ngay!'); after
 the actual result, say only the sentence Codex relays from the tool's qr_reply, e.g.
-'Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7.', when
+'Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số 7.', when
 qr_available=true for a pending payment; never change its card number. If the merchant verifies status=paid, relay
 Codex's paid result naturally, in one or two friendly sentences in your own words,
 instead, without another QR/order. Otherwise give one
@@ -380,13 +390,7 @@ class CodexVoice:
                 if (
                     thread in self.callbacks
                     and not (thread in self.peers and method == "thread/realtime/transcript/done")
-                    and method
-                    in (
-                        "thread/realtime/transcript/done",
-                        "thread/realtime/error",
-                        "thread/realtime/closed",
-                        "thread/realtime/outputAudio/delta",
-                    )
+                    and method in FORWARDED_EVENTS
                 ):
                     await self.callbacks[thread][1](method, params)
         except (OSError, ValueError, asyncio.CancelledError):

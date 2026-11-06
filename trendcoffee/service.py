@@ -548,18 +548,44 @@ class Service:
                 logging.getLogger(__name__).exception("Paid-order listener failed")
 
     def _send_merchant(self, order):
+        """Create the merchant order and its QR, logging how long each merchant step took."""
+        steps, began = [], time.monotonic()
+
+        def step(name, call, *args, **kwargs):
+            started = time.monotonic()
+            try:
+                return call(*args, **kwargs)
+            finally:
+                steps.append(f"{name} {time.monotonic() - started:.2f}")
+
+        outcome = "error"  # an unexpected exception keeps this
+        try:
+            result = self._send_merchant_steps(order, step)
+            outcome = (result.get("merchant") or {}).get("error") or "ok"
+            return result
+        finally:
+            # 2026-11-06: kiosk_checkout took 2.9 s median, up to 10.5 s, all in merchant calls.
+            logging.getLogger(__name__).warning(
+                "Merchant checkout at %s took %.1f s (%s): %s",
+                time.strftime("%H:%M:%S"),
+                time.monotonic() - began,
+                outcome,
+                ", ".join(steps),
+            )
+
+    def _send_merchant_steps(self, order, step):
         from .merchant import MerchantError
 
         try:
             catalog = {i["id"]: i for i in self.menu()}
             hidden = getattr(self.merchant, "hidden_voucher", None)
-            voucher = hidden(order) if hidden else None
+            voucher = step("voucher", hidden, order) if hidden else None
             if voucher:
                 # Recorded before the POST: validation must know the merchant may discount it.
                 order = self._save_order(order, merchant={**order["merchant"], "voucher": voucher})
-                remote = self.merchant.create(order, catalog, voucher=voucher)
+                remote = step("create", self.merchant.create, order, catalog, voucher=voucher)
             else:
-                remote = self.merchant.create(order, catalog)
+                remote = step("create", self.merchant.create, order, catalog)
             slug = self.merchant.reference(remote)
             order = self._save_order(
                 order,
@@ -567,16 +593,16 @@ class Service:
                 delivery="merchant_api",
             )
             if not all(key in remote for key in ("branch", "subtotal", "orderItems")):
-                remote = self.merchant.fetch(order)
-            payment = self.merchant.payment(remote, order)
+                remote = step("fetch", self.merchant.fetch, order)
+            payment = step("payment", self.merchant.payment, remote, order)
             if payment["status"] == "pending" and not payment["qr_image"]:
                 # Record the attempt BEFORE the POST; reads/retries must never re-initiate blindly.
                 order = self._save_order(
                     order, merchant={**order["merchant"], "payment_initiated": True}
                 )
-                self.merchant.initiate(order)
-                remote = self.merchant.fetch(order)
-                payment = self.merchant.payment(remote, order)
+                step("initiate", self.merchant.initiate, order)
+                remote = step("fetch", self.merchant.fetch, order)
+                payment = step("payment", self.merchant.payment, remote, order)
             return self._save_order(
                 order,
                 payment=payment,

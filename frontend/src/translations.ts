@@ -209,7 +209,7 @@ const english: Record<string, string> = {
   'Chưa chuyển đến quán': 'Not yet delivered to the café',
   'Thanh toán đơn hàng': 'Order payment',
   'Đã thanh toán': 'Paid',
-  'Thẻ rung số': 'Pickup card',
+  'Thẻ số': 'Card number',
   'Quét QR thanh toán': 'Scan QR to pay',
   'Mã QR thanh toán do Trend Coffee cung cấp': 'Payment QR supplied by Trend Coffee',
   'Hiệu lực còn': 'Expires in',

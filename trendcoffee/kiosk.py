@@ -20,15 +20,16 @@ from jsonschema import Draft202012Validator
 from .camera_rtc import CameraPeer
 from .claim_guard import (
     PAID,
-    TAKEOVER_NOTE,
     UNBACKED_RESULT_NOTE,
     UNVERIFIED_PAID_NOTE,
     ClaimGuard,
     paid_note,
     paid_turn,
+    promises,
     recovery_turn,
     says_paid,
     spoken_items,
+    takeover_note,
     wrong_card,
     wrong_card_note,
 )
@@ -304,6 +305,10 @@ PAID_NOTICE_WAIT = 20.0  # seconds a paid notice waits for such a tool call to f
 # A spoken session warning waits this long at most for Trend to finish the current reply.
 WARNING_WAIT = 12.0
 WARNING_POLL = 0.1
+# A promise with no Codex turn behind it is taken over after this long (2026-11-06); Codex may
+# start up to PROMISE_ALLOWANCE before the guest's transcript arrives.
+PROMISE_WAIT = 3.0
+PROMISE_ALLOWANCE = 3.0
 
 
 def screen_order(menu, ids):
@@ -429,6 +434,7 @@ class InteractionHost:
         self.speaker_factory = speaker_factory
         self.speaker = None
         self.discard_logged = False  # one log per reply when its audio is not played
+        self.promise_wait = PROMISE_WAIT
         self.playback_lock = asyncio.Lock()
         self.playback_tasks = set()
         self._speaker_stop = None
@@ -881,6 +887,7 @@ class InteractionHost:
         paid_verified = [False]  # set only by a tool result that says paid
         paid_flagged = set()
         card_flagged = set()  # replies already stopped for naming the wrong pickup card
+        codex_turn_at = [None]  # when Codex last took up work on this thread
         history = deque(maxlen=6)  # (role, text) of recent finished turns, for a recovery turn
         recovered = set()  # guest requests the kiosk already ran itself
 
@@ -911,7 +918,7 @@ class InteractionHost:
                         await self.codex.start_turn(
                             thread, recovery_turn(request, list(history), payment=payment)
                         )
-                        told = TAKEOVER_NOTE
+                        told = takeover_note(request)
                     except Exception:
                         logging.getLogger(__name__).exception("Kiosk recovery turn failed")
                 if hasattr(self.codex, "append_text"):
@@ -944,6 +951,43 @@ class InteractionHost:
                 )
                 self.cleanup_tasks.add(task)
                 task.add_done_callback(self.cleanup_tasks.discard)
+
+        def delegated(request_at):
+            turn = codex_turn_at[0]
+            return guard.backed() or (turn is not None and turn >= request_at - PROMISE_ALLOWANCE)
+
+        async def take_over_promise():
+            """Trend promised to act; if Codex took up nothing, run the request here."""
+            await asyncio.sleep(self.promise_wait)
+            request, request_at = guard.request_text, guard.request_at
+            if (
+                not self.active
+                or generation != self.generation
+                or not request
+                or request_at is None
+                or delegated(request_at)
+                or (request_at, False) in recovered
+                or not hasattr(self.codex, "start_turn")
+            ):
+                return
+            recovered.add((request_at, False))
+            thread = self.thread_id
+            self.audio_metrics["undelegated_promises"] = (
+                self.audio_metrics.get("undelegated_promises", 0) + 1
+            )
+            logging.getLogger(__name__).warning(
+                "Trend promised at %s but handed nothing to Codex; the kiosk runs the request",
+                time.strftime("%H:%M:%S"),
+            )
+            try:
+                await self.codex.start_turn(thread, recovery_turn(request, list(history)))
+            except Exception:
+                logging.getLogger(__name__).exception("Kiosk promise takeover failed")
+                return
+            if hasattr(self.codex, "append_text"):
+                await self.codex.append_text(
+                    thread, "developer", takeover_note(request, promise=True)
+                )
 
         def show_spoken_items(text):
             """Drinks Trend names without a kiosk tool behind them still reach the screen."""
@@ -1036,6 +1080,9 @@ class InteractionHost:
                 or self.voice_connection is not connection
             ):
                 return
+            if method == "turn/started":
+                codex_turn_at[0] = self.clock()
+                return
             if (
                 method
                 in ("thread/realtime/userTurn/started", "thread/realtime/assistantTurn/started")
@@ -1114,6 +1161,10 @@ class InteractionHost:
                 if role == "assistant":
                     guard.done(text, self.clock())
                     show_spoken_items(text)
+                    if promises(text):
+                        task = asyncio.create_task(take_over_promise())
+                        self.cleanup_tasks.add(task)
+                        task.add_done_callback(self.cleanup_tasks.discard)
                 if role in ("user", "assistant"):
                     self._recent_fusion(tr=role, final=True)
                 if turn_id:
