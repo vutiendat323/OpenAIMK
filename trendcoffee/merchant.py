@@ -23,24 +23,44 @@ AI_ORDER_NOTICE = (
 )
 
 
-# With a pickup card (user decisions 2026-11-06) the notice names the card, and the table or
-# takeaway, so staff can match the order to the card they make vibrate.
-CARD_NOTICE = "Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách!"
+# With a pickup card (user decisions 2026-11-06) the description names the card, and the table
+# or takeaway, so staff can match the order to the card they make vibrate.
+#
+# The merchant prints the description as ONE run-on paragraph on the bill (newlines dropped,
+# each word capitalised), so it is written as short sentences with the guest's information
+# first and the technical tag last (user, 2026-11-06 21:50, after seeing a printed bill).
+CARD_NOTICE = "Khi thẻ rung, mời bạn đến quầy nhận món. Cảm ơn bạn!"
+CARD_NOTICE_FORMAL = "Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách!"
+
+
+def _card_place(order):
+    if order.get("fulfillment") == "takeaway":
+        return "Mang đi"
+    return "Bàn " + str(order["table_label"]) if order.get("table_label") else ""
 
 
 def card_notice(order, *, old_wording=False):
-    """`old_wording`: orders created before 2026-11-06 21:30 said "THẺ RUNG SỐ N" (the user
-    then shortened the noun to "thẻ"); they keep that description on the merchant."""
+    """The two-line form used earlier on 2026-11-06 (before the paragraph form); orders
+    created then keep it on the merchant. `old_wording`: "THẺ RUNG SỐ N" before the noun was
+    shortened to "thẻ"."""
     card = ("THẺ RUNG SỐ " if old_wording else "THẺ SỐ ") + str(order["vibrating_card"])
-    if order.get("fulfillment") == "takeaway":
-        card += " · Mang đi"
-    elif order.get("table_label"):
-        card += " · Bàn " + str(order["table_label"])
-    return "AI ORDER\n" + card + "\n" + CARD_NOTICE
+    place = _card_place(order)
+    return "AI ORDER\n" + card + (" · " + place if place else "") + "\n" + CARD_NOTICE_FORMAL
 
 
-def order_description(order, *, legacy=False, old_wording=False):
-    """The kiosk's merchant description; `legacy` is the form used before the notice."""
+def order_description(order, *, legacy=False, old_wording=False, line_breaks=False):
+    """The kiosk's merchant description.
+
+    `legacy`: before the AI ORDER notice. `old_wording` / `line_breaks`: the two earlier card
+    forms (see `card_notice`). Without a card the AI ORDER notice form is kept."""
+    note = order.get("order_note")
+    if not legacy and order.get("vibrating_card") and not (old_wording or line_breaks):
+        place = _card_place(order)
+        text = f"THẺ SỐ {order['vibrating_card']}" + (f" - {place}" if place else "") + ". "
+        text += CARD_NOTICE
+        if note:
+            text += f" Ghi chú của khách: {note.strip().rstrip('.')}."
+        return text + f" (AI ORDER - Kiosk {order['id']})"
     if legacy:
         notice = ""
     elif order.get("vibrating_card"):
@@ -48,7 +68,7 @@ def order_description(order, *, legacy=False, old_wording=False):
     else:
         notice = AI_ORDER_NOTICE + "\n"
     text = notice + "Kiosk " + order["id"]
-    return text + ("\n" + order["order_note"] if order.get("order_note") else "")
+    return text + ("\n" + note if note else "")
 
 
 # A hidden voucher on every order (user decision 2026-11-06): the shop's private voucher is
@@ -287,6 +307,7 @@ class MerchantClient:
                 order_description(order),
                 order_description(order, legacy=True),
                 order_description(order, old_wording=True),
+                order_description(order, line_breaks=True),
             )
             branch_matches = remote.get("description") in expected and remote.get("type") == (
                 "take-out" if order["fulfillment"] == "takeaway" else "at-table"
