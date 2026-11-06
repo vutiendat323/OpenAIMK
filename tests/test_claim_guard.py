@@ -315,7 +315,8 @@ def test_a_stopped_claim_makes_the_kiosk_run_the_guests_request_itself(svc):
         assert "một latte mang đi" in text, "the guest's own words"
         assert "No kiosk tool has run" in text and "kiosk tools" in text
         ((_, role, note),) = host.codex.notes
-        assert role == "developer" and "Do not delegate" in note and "relay" in note
+        assert role == "developer" and "do not delegate that same request" in note
+        assert "relay" in note and "every new guest request" in note
         await host.close()
 
     asyncio.run(run())
@@ -737,3 +738,39 @@ def test_codex_turn_starts_reach_the_kiosk():
     from trendcoffee.codex_voice import FORWARDED_EVENTS
 
     assert "turn/started" in FORWARDED_EVENTS
+
+
+# 2026-11-06 20:38: after "Do not delegate it again ... wait for the result", Trend stopped
+# delegating NEW orders for the rest of the session ("mình đang chờ hệ thống trả kết quả").
+def test_takeover_notes_cover_only_the_one_request():
+    from trendcoffee.claim_guard import takeover_note
+
+    for promise_kind in (False, True):
+        note = takeover_note(REQUEST, promise=promise_kind)
+        assert f'"{REQUEST}"' in note, "the note names the one request it is about"
+        assert "every new guest request" in note and "as usual" in note
+        assert "wait for the result" not in note.lower()
+
+
+def test_the_promise_takeover_tells_trend_to_keep_delegating_new_requests(svc):
+    async def run():
+        host, on_event = await promise_host(svc)
+        await promise(on_event)
+        await asyncio.sleep(0.2)
+        notes = [note for _, role, note in host.codex.notes if role == "developer"]
+        assert any(REQUEST in note and "every new guest request" in note for note in notes)
+        await host.close()
+
+    asyncio.run(run())
+
+
+def test_the_unbacked_result_takeover_tells_trend_to_keep_delegating_new_requests(svc):
+    async def run():
+        host, _, _, _, on_event = await delegating_host(svc)
+        await claim(on_event, REQUEST, FABRICATED[0], 1)
+        await asyncio.sleep(0.05)
+        notes = [note for _, role, note in host.codex.notes if role == "developer"]
+        assert any(REQUEST in note and "every new guest request" in note for note in notes)
+        await host.close()
+
+    asyncio.run(run())

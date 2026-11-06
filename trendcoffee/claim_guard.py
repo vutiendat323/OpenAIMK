@@ -165,11 +165,22 @@ def says_paid(result):
 
 # Sent when the kiosk runs the guest's request itself, because the voice stated a result
 # without ever delegating it (2026-11-04 16:00: "để mình lên đơn", then a QR that did not exist).
-TAKEOVER_NOTE = (
-    "Kiosk check: no kiosk tool ran for the guest's latest request, so the result you started "
-    "to state did not happen. The kiosk is now running that request itself. Do not delegate it "
-    "again and do not state any result; wait for the result and relay it."
-)
+def takeover_note(request, *, promise=False):
+    """What Trend is told when the kiosk runs a request itself.
+
+    Scoped to that one request (2026-11-06 20:38: an unscoped "do not delegate it again ...
+    wait for the result" made Trend stop delegating new orders for the rest of the session)."""
+    what = (
+        "you promised to act on it but did not delegate it"
+        if promise
+        else "the result you started to state did not happen"
+    )
+    return (
+        f'Kiosk check about the guest\'s request "{request}": {what}. The kiosk is running '
+        "that one request itself, so do not delegate that same request again and do not state "
+        "its result yourself; relay the result when Codex returns it. This applies only to that "
+        "request: delegate every new guest request to Codex as usual, right away."
+    )
 
 
 # A promise to act ("mình ghi liền cho bạn") is not a result, but if no Codex turn follows,
@@ -179,11 +190,6 @@ PROMISE = re.compile(
     r"|để mình (làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra)"
     r"|đang chờ hệ thống",
     re.IGNORECASE,
-)
-PROMISE_TAKEOVER_NOTE = (
-    "Kiosk check: you promised to act on the guest's latest request but did not delegate it. "
-    "The kiosk is now running that request itself. Do not delegate it again and do not state "
-    "any result; wait for the result and relay it."
 )
 
 

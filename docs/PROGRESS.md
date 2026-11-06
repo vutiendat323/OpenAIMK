@@ -1424,3 +1424,8 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 - C: every merchant checkout logs `Merchant checkout at HH:MM:SS took N s (<outcome>): voucher …, create …, fetch …, payment …, initiate …` to find the slow merchant step (the payment-initiate call once exceeded the 4 s client timeout).
 - Also found, not changed yet (B): each Codex turn carries 17–19k input tokens, including ~26k chars of unused multi-agent tools, the repo's coding `AGENTS.md` (Codex runs with the repo as cwd) and multi-agent role text; the first turn per guest is uncached.
 - Tests: `tests/test_claim_guard.py` +6, `tests/test_merchant_timing.py` (2); backend 564 passed (13 environment-only collection errors).
+
+## Takeover notes cover only the one request — 2026-11-06 21:20
+
+- Why Trend promised without delegating: (1) the realtime voice sometimes speaks its acknowledgement and never emits the delegation (16:06:22, the first request of a session, no kiosk note before it); (2) our own note after a takeover — "Do not delegate it again … wait for the result and relay it" — was applied to every later request: at 20:38:27 the claim guard took over, at 20:38:42 a new order got "mình gửi ngay" with no delegation, at 20:39:17 Trend said "mình đang chờ hệ thống trả kết quả", and at 20:44:06 again in the same session.
+- `claim_guard.takeover_note(request, promise=False)` replaces `TAKEOVER_NOTE`/`PROMISE_TAKEOVER_NOTE`: it quotes the guest's request, says not to delegate *that same request* again, and ends "This applies only to that request: delegate every new guest request to Codex as usual, right away." Used by the unbacked-result and promise takeovers. Tests +3 (one old assertion reworded); backend 567 passed.

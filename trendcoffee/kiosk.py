@@ -20,8 +20,6 @@ from jsonschema import Draft202012Validator
 from .camera_rtc import CameraPeer
 from .claim_guard import (
     PAID,
-    PROMISE_TAKEOVER_NOTE,
-    TAKEOVER_NOTE,
     UNBACKED_RESULT_NOTE,
     UNVERIFIED_PAID_NOTE,
     ClaimGuard,
@@ -31,6 +29,7 @@ from .claim_guard import (
     recovery_turn,
     says_paid,
     spoken_items,
+    takeover_note,
     wrong_card,
     wrong_card_note,
 )
@@ -919,7 +918,7 @@ class InteractionHost:
                         await self.codex.start_turn(
                             thread, recovery_turn(request, list(history), payment=payment)
                         )
-                        told = TAKEOVER_NOTE
+                        told = takeover_note(request)
                     except Exception:
                         logging.getLogger(__name__).exception("Kiosk recovery turn failed")
                 if hasattr(self.codex, "append_text"):
@@ -986,7 +985,9 @@ class InteractionHost:
                 logging.getLogger(__name__).exception("Kiosk promise takeover failed")
                 return
             if hasattr(self.codex, "append_text"):
-                await self.codex.append_text(thread, "developer", PROMISE_TAKEOVER_NOTE)
+                await self.codex.append_text(
+                    thread, "developer", takeover_note(request, promise=True)
+                )
 
         def show_spoken_items(text):
             """Drinks Trend names without a kiosk tool behind them still reach the screen."""
