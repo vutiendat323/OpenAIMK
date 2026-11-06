@@ -37,44 +37,22 @@ def encode(value):
 
 # Pickup cards (user decisions 2026-11-06): every new order takes one of 16 cards, rotating
 # 1..16; staff make the card vibrate by hand. The number moves on only past a PAID order: an
-# unpaid order gives its number back once its QR has expired, while a live QR keeps it so two
-# guests paying at once never share a card. Local-queue orders (no merchant payment) keep the
-# number they were given.
+# unpaid order, even one whose QR is still valid, leaves the number where it is, so the next
+# order gets the same card. Local-queue orders (no merchant payment) keep the number they got.
 CARD_COUNT = 16
-QR_SECONDS = 900  # a merchant QR's lifetime; holds the number of an order still being created
 
 
-def _card_holds(order, now):
-    """(consumed, held): the order used its number for good, or still holds it for now."""
-    if order.get("payment_status") == "paid" or "merchant" not in order:
-        return True, False
-    expires = (order.get("payment") or {}).get("expires_at")
-    if expires is None:
-        expires = timestamp(order["created_at"]) + QR_SECONDS
-    return False, expires > now
-
-
-def _next_card(db, now):
-    """The next card, inside the caller's write transaction (the processes take turns)."""
-    last, held = None, set()
+def _next_card(db):
+    """The card after the latest paid order, inside the caller's write transaction."""
     rows = db.execute(
         "SELECT data FROM orders WHERE json_extract(data,'$.vibrating_card') IS NOT NULL"
         " ORDER BY rowid DESC"
     )
     for (data,) in rows:
         order = json.loads(data)
-        consumed, holding = _card_holds(order, now)
-        if consumed:
-            last = order["vibrating_card"]
-            break
-        if holding:
-            held.add(order["vibrating_card"])
-    card = last % CARD_COUNT + 1 if last else 1
-    for _ in range(CARD_COUNT):
-        if card not in held:
-            return card
-        card = card % CARD_COUNT + 1
-    return card  # every card is on a live QR: share rather than refuse the order
+        if order.get("payment_status") == "paid" or "merchant" not in order:
+            return order["vibrating_card"] % CARD_COUNT + 1
+    return 1
 
 
 def timestamp(value):
@@ -530,7 +508,7 @@ class Service:
                 payment_status="unverified",
                 delivery="local_queue_only",
                 created_at=now_iso(),
-                vibrating_card=_next_card(db, time.time()),
+                vibrating_card=_next_card(db),
             )
             if self.merchant and quote.get("mode") == "merchant_api":
                 order["merchant"] = {"state": "creating"}

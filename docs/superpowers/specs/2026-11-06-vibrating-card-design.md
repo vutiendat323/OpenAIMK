@@ -114,11 +114,11 @@ to a card and the guest knows which card is theirs.
 ## How (decided in conversation)
 
 - Card assigned **when the order is created** (so it is in the merchant description before
-  the QR is shown). **Amended 2026-11-06 by the user:** the number advances only past a
-  **paid** order. An unpaid order gives its number back once its QR has expired (the next
-  order reuses it); an order with a live QR (or still being created, up to the 15-minute QR
-  lifetime) keeps its number, so the next order skips it. Local-queue orders (no merchant
-  payment) keep their number.
+  the QR is shown). **Amended 2026-11-06 by the user (twice):** the number advances only past a
+  **paid** order. Any unpaid order, even one whose QR is still valid, leaves the number where
+  it is, so the next order gets the same card (an earlier version skipped numbers held by a
+  live QR; the user asked to keep the current number instead). Local-queue orders (no
+  merchant payment) keep their number.
   Changing fulfillment (takeaway ↔ dine-in) on a retry does not matter for the card, since
   both get one.
 - The counter **persists across restarts**.

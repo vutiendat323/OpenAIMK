@@ -79,7 +79,7 @@
   and placing it without a second confirmation. Advice-only/view-only stays read-only.
   When the requested order has a pending QR, final speech is only the tool's `qr_reply`
   (“Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số N.”). Verified paid status
-  gets a paid answer. Pickup cards: every new order gets card 1–16, rotating, advancing only past a paid order (an unpaid order's number is reused once its QR expires); it is in the merchant
+  gets a paid answer. Pickup cards: every new order gets card 1–16, rotating, advancing only past a paid order (an unpaid order, even with a live QR, leaves the number for the next order); it is in the merchant
   order description (no card header on the printed invoice, user decision 2026-11-06); see `docs/superpowers/specs/2026-11-06-vibrating-card-design.md`.
   See `docs/evals/qr-checkout-flow.md` for the payment contract and fixture evidence.
   Keep QR inline and stable checkout IDs on retries; preserve per-cup and whole-order notes.

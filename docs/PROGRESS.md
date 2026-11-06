@@ -1411,3 +1411,8 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 - `MerchantClient(voucher_code=...)` (set only by `from_environment`, i.e. the running kiosk): looks the voucher up (cached 60 s) and attaches its slug only if active, has uses left, is in its date window, is `percent_order` ≤ 10%, allows bank transfer, meets `minOrderValue`, and every cart item is a listed product; otherwise the order is placed at full price. The slug is recorded in `order.merchant.voucher` before the POST.
 - Money checks: `MerchantClient.payable` accepts a merchant subtotal below the listed total only when our voucher slug is echoed, `originalSubtotal` equals the listed total and the discount is at most 10%; anything else stays `merchant_order_mismatch`/`merchant_payment_mismatch`. QR and paid amounts are compared with that payable amount. Trend's tool results and the screen's order events drop `merchant.voucher` (`kiosk.public_order`).
 - Tests: `tests/test_hidden_voucher.py` (8). Three real test orders exist on the merchant (a172f91b46, the slug probe, a0ab692ef9); the user cancels them.
+
+## Pickup card: a live unpaid QR keeps the current number — 2026-11-06 20:45
+
+- User: "'QR còn hạn', still keep number current". Evening data: after paid 13, order 14 (QR still live) and then order 15 (skipped 14 because of that live QR). Now `_next_card(db)` is simply the latest paid (or local-queue) order's card + 1; unpaid orders never move the number, live QR or not. With that data the next order gets 14.
+- Accepted risk (user-visible only if it happens): a guest who leaves with a live QR and pays later shares the number with the next guest.

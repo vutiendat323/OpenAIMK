@@ -158,7 +158,7 @@ def next_card_after(svc, *orders):
             db.execute(
                 "INSERT INTO orders VALUES (?,?,?,?)", (order["id"], None, None, json.dumps(order))
             )
-        return _next_card(db, NOW)
+        return _next_card(db)
 
 
 def test_the_afternoon_of_2026_11_06_gives_unpaid_numbers_back(svc):
@@ -176,25 +176,26 @@ def test_a_skipped_order_gives_its_number_to_the_next_guest(svc):
     assert next_card_after(svc, merchant_order(6, paid=True), merchant_order(7)) == 7
 
 
-def test_a_live_qr_keeps_its_number(svc):
+def test_a_live_unpaid_qr_does_not_move_the_number_on(svc):
+    """User 2026-11-06 20:45: while a QR is still valid and unpaid, keep the current number."""
     live = merchant_order(7, expires_in=300)
-    assert next_card_after(svc, merchant_order(6, paid=True), live) == 8
+    assert next_card_after(svc, merchant_order(6, paid=True), live) == 7
 
 
-def test_an_order_still_waiting_for_its_qr_keeps_its_number(svc):
+def test_an_order_still_waiting_for_its_qr_does_not_move_the_number_on(svc):
     creating = merchant_order(7, created_ago=20, qr=False)
-    assert next_card_after(svc, merchant_order(6, paid=True), creating) == 8
+    assert next_card_after(svc, merchant_order(6, paid=True), creating) == 7
 
 
-def test_an_old_order_that_never_got_a_qr_gives_its_number_back(svc):
-    stale = merchant_order(7, created_ago=2000, qr=False)
-    assert next_card_after(svc, merchant_order(6, paid=True), stale) == 7
+def test_the_evening_of_2026_11_06_keeps_card_fourteen(svc):
+    """Paid 13; then 14 and 15 were given while 14's QR was still live -> the next is 14."""
+    orders = [
+        merchant_order(13, paid=True),
+        merchant_order(14, expires_in=500),
+        merchant_order(15, expires_in=700),
+    ]
+    assert next_card_after(svc, *orders) == 14
 
 
 def test_after_card_sixteen_comes_one(svc):
     assert next_card_after(svc, merchant_order(16, paid=True)) == 1
-
-
-def test_every_card_held_still_returns_a_card(svc):
-    held = [merchant_order(card, expires_in=300) for card in range(1, 17)]
-    assert next_card_after(svc, *held) in range(1, 17)
