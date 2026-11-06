@@ -19,3 +19,12 @@ it('shows only real card numbers 1 to 16', () => {
   expect(shownCard(2.5, null)).toBeNull()
   expect(shownCard(16, null)).toBe(16)
 })
+
+it('shows the card only while the QR is up or once paid', () => {
+  const qr = { status: 'pending', qr_image: 'data:image/png;base64,x' }
+  expect(shownCard(7, qr, 'pending')).toBe(7)
+  expect(shownCard(7, { status: 'paid' }, 'paid')).toBe(7)
+  for (const status of ['creating', 'rejected', 'uncertain', 'review_required', 'cancelled'])
+    expect(shownCard(7, { status }, status)).toBeNull()
+  expect(shownCard(7, { status: 'pending', qr_image: null }, 'pending')).toBeNull()
+})

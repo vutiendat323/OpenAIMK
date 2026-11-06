@@ -81,7 +81,7 @@ export function PaymentQr({
     ? Math.max(0, Math.ceil(payment.expires_at - now / 1000))
     : null
   const status = payment?.status === 'pending' && remaining === 0 ? 'expired' : payment?.status
-  const pickupCard = shownCard(card, payment)
+  const pickupCard = shownCard(card, payment, status ?? '')
   return (
     <section
       className={`payment-qr${status === 'order_required' ? ' payment-qr-empty' : ''}`}

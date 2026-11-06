@@ -22,6 +22,8 @@ from .claim_guard import (
     PAID,
     TAKEOVER_NOTE,
     UNBACKED_RESULT_NOTE,
+    wrong_card,
+    wrong_card_note,
     UNVERIFIED_PAID_NOTE,
     ClaimGuard,
     paid_note,
@@ -870,6 +872,7 @@ class InteractionHost:
         reply_stopped = [False]
         paid_verified = [False]  # set only by a tool result that says paid
         paid_flagged = set()
+        card_flagged = set()  # replies already stopped for naming the wrong pickup card
         history = deque(maxlen=6)  # (role, text) of recent finished turns, for a recovery turn
         recovered = set()  # guest requests the kiosk already ran itself
 
@@ -909,6 +912,28 @@ class InteractionHost:
             if thread:
                 # Not awaited here: this event arrives from Codex's own reader loop.
                 task = asyncio.create_task(recover())
+                self.cleanup_tasks.add(task)
+                task.add_done_callback(self.cleanup_tasks.discard)
+
+        async def stop_wrong_card(card):
+            """Trend named a pickup card that is not the order's own: stop and correct it."""
+            reply_stopped[0] = True
+            if self.speaker is not None:
+                self.speaker.interrupt()
+            self.audio_metrics["wrong_card_claims"] = (
+                self.audio_metrics.get("wrong_card_claims", 0) + 1
+            )
+            logging.getLogger(__name__).warning(
+                "Trend named the wrong pickup card at %s (order card %s); reply stopped",
+                time.strftime("%H:%M:%S"),
+                card,
+            )
+            await self.emit("voice_turn", role="user")
+            thread = self.thread_id
+            if thread and hasattr(self.codex, "append_text"):
+                task = asyncio.create_task(
+                    self.codex.append_text(thread, "developer", wrong_card_note(card))
+                )
                 self.cleanup_tasks.add(task)
                 task.add_done_callback(self.cleanup_tasks.discard)
 
@@ -1049,6 +1074,13 @@ class InteractionHost:
                     # A tool may have run, but none reported the order as paid.
                     paid_flagged.add(str(turn_id))
                     await stop_unbacked_result(UNVERIFIED_PAID_NOTE, payment=True)
+                elif (
+                    role == "assistant"
+                    and str(turn_id) not in card_flagged
+                    and wrong_card(text, self._order_card())
+                ):
+                    card_flagged.add(str(turn_id))
+                    await stop_wrong_card(self._order_card())
                 await self.emit(
                     "transcript",
                     role=role,
@@ -1622,6 +1654,11 @@ class InteractionHost:
         if name == "kiosk_support":
             return self.service.handoff(self.token, str(args.get("reason", ""))[:1000])
         raise KioskError("tool_not_permitted", 403)
+
+    def _order_card(self):
+        """The pickup card of this guest's latest order, or None."""
+        order = next(reversed(self.submitted.values()), None) if self.submitted else None
+        return (order or {}).get("vibrating_card")
 
     @staticmethod
     def _qr_reply(payment, card):
