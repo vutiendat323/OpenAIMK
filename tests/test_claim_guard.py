@@ -583,12 +583,14 @@ def test_a_reply_naming_another_pickup_card_is_spotted():
     """2026-11-06 anti-goal: Trend must never name a card that is not the order's own."""
     from trendcoffee.claim_guard import wrong_card
 
-    reply = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7."
+    reply = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số 7."
     assert wrong_card(reply, 4)
     assert not wrong_card(reply, 7)
     assert not wrong_card("Bạn quét QR trên màn hình để thanh toán nhé.", 4)
     assert wrong_card(reply, None), "no carded order: no card may be named"
-    assert wrong_card("Thẻ rung số 12 của bạn nhé", 2)
+    assert wrong_card("Thẻ số 12 của bạn nhé", 2)
+    assert wrong_card("thẻ rung của bạn là số 7", 4), "the old wording is still spotted"
+    assert not wrong_card("Mình có số thẻ ngân hàng", 4)
 
 
 def test_the_kiosk_stops_a_reply_with_the_wrong_pickup_card(svc):
@@ -610,7 +612,7 @@ def test_the_kiosk_stops_a_reply_with_the_wrong_pickup_card(svc):
         await on_tool({"tool": "kiosk_payment", "arguments": {}, "callId": "p1"})
         await on_event("thread/realtime/assistantTurn/started", {"turnId": "a1"})
         speaker.calls.clear()
-        right = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 4."
+        right = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số 4."
         await on_event(
             "thread/realtime/transcript/delta",
             {"role": "assistant", "delta": right, "turnId": "a1"},

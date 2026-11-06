@@ -91,7 +91,7 @@ export function PaymentQr({
     >
       <h3>{t(status === 'paid' ? 'Đã thanh toán' : 'Quét QR thanh toán')}</h3>
       {pickupCard !== null && (
-        <div className="payment-card-number" aria-label={t('Thẻ rung số') + ' ' + pickupCard}>
+        <div className="payment-card-number" aria-label={t('Thẻ số') + ' ' + pickupCard}>
           {pickupCard}
         </div>
       )}

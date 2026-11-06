@@ -1429,3 +1429,9 @@ The user clarified: preserve the standing avatar’s warm face/color; correct ex
 
 - Why Trend promised without delegating: (1) the realtime voice sometimes speaks its acknowledgement and never emits the delegation (16:06:22, the first request of a session, no kiosk note before it); (2) our own note after a takeover — "Do not delegate it again … wait for the result and relay it" — was applied to every later request: at 20:38:27 the claim guard took over, at 20:38:42 a new order got "mình gửi ngay" with no delegation, at 20:39:17 Trend said "mình đang chờ hệ thống trả kết quả", and at 20:44:06 again in the same session.
 - `claim_guard.takeover_note(request, promise=False)` replaces `TAKEOVER_NOTE`/`PROMISE_TAKEOVER_NOTE`: it quotes the guest's request, says not to delegate *that same request* again, and ends "This applies only to that request: delegate every new guest request to Codex as usual, right away." Used by the unbacked-result and promise takeovers. Tests +3 (one old assertion reworded); backend 567 passed.
+
+## "thẻ rung" → "thẻ" — 2026-11-06 21:35
+
+- User: the noun "thẻ rung" is just "thẻ". QR sentence is now "Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số N." (`session_notices.qr_sentence`, both voice prompts), the merchant description line is "THẺ SỐ N · Bàn <table>" / "· Mang đi", the kiosk label is "Thẻ số" (en "Card number"). "Khi thẻ rung, mời quý khách đến quầy nhận món…" keeps "rung" as the verb (the card vibrates).
+- `merchant.order_description(order, old_wording=True)` rebuilds the previous "THẺ RUNG SỐ N" description, and `validate` accepts it, so orders already on the merchant (including unpaid ones) keep validating. `claim_guard.SPOKEN_CARD` spots a wrong number in either wording. Older entries above keep the old wording as history.
+- Tests: `test_orders_made_with_the_old_card_wording_still_validate` (+1); wording updated in 5 test files; backend and frontend suites green.

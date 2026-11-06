@@ -193,9 +193,7 @@ def test_qr_sentence_names_the_card():
     """User decision 2026-11-06: exact sentence, with the order's real pickup card."""
     from trendcoffee.session_notices import qr_sentence
 
-    assert qr_sentence(7) == (
-        "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7."
-    )
+    assert qr_sentence(7) == ("Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số 7.")
     assert qr_sentence(None) == "Bạn quét QR trên màn hình để thanh toán nhé."
 
 

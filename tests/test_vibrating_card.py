@@ -75,23 +75,21 @@ def test_dine_in_description_names_card_and_table():
         "table_label": "05",
         "order_note": "ít đá",
     }
-    assert order_description(carded) == (
-        f"AI ORDER\nTHẺ RUNG SỐ 7 · Bàn 05\n{NOTICE}\nKiosk abc\nít đá"
-    )
+    assert order_description(carded) == (f"AI ORDER\nTHẺ SỐ 7 · Bàn 05\n{NOTICE}\nKiosk abc\nít đá")
 
 
 def test_takeaway_description_says_mang_di():
     from trendcoffee.merchant import order_description
 
     carded = {"id": "abc", "vibrating_card": 12, "fulfillment": "takeaway", "table_label": None}
-    assert order_description(carded) == f"AI ORDER\nTHẺ RUNG SỐ 12 · Mang đi\n{NOTICE}\nKiosk abc"
+    assert order_description(carded) == f"AI ORDER\nTHẺ SỐ 12 · Mang đi\n{NOTICE}\nKiosk abc"
 
 
 def test_dine_in_without_table_label_names_only_the_card():
     from trendcoffee.merchant import order_description
 
     carded = {"id": "abc", "vibrating_card": 3, "fulfillment": "at_table", "table_label": None}
-    assert order_description(carded) == f"AI ORDER\nTHẺ RUNG SỐ 3\n{NOTICE}\nKiosk abc"
+    assert order_description(carded) == f"AI ORDER\nTHẺ SỐ 3\n{NOTICE}\nKiosk abc"
 
 
 def test_orders_without_a_card_keep_todays_description():
@@ -123,7 +121,7 @@ def test_validate_accepts_a_carded_guest_order_echo(svc):
     connect(svc, handler)
     placed = svc.checkout(svc.new_session(), [line(quantity=2)], "takeaway", checkout_id="c1")
     assert body["description"] == order_description(placed)
-    assert "THẺ RUNG SỐ 1 · Mang đi" in body["description"]
+    assert "THẺ SỐ 1 · Mang đi" in body["description"]
     echo = remote_order(description=body["description"], type="take-out")
     echo.pop("branch")
     MerchantClient.validate(svc.merchant, echo, placed)  # does not raise
@@ -199,3 +197,35 @@ def test_the_evening_of_2026_11_06_keeps_card_fourteen(svc):
 
 def test_after_card_sixteen_comes_one(svc):
     assert next_card_after(svc, merchant_order(16, paid=True)) == 1
+
+
+def test_orders_made_with_the_old_card_wording_still_validate(svc):
+    """2026-11-06: the noun "thẻ rung" became "thẻ"; orders already on the merchant keep the
+    description they were created with ("THẺ RUNG SỐ N")."""
+    from test_merchant import connect, remote_order
+    from test_service import line
+
+    from trendcoffee.merchant import MerchantClient, order_description
+
+    body = {}
+
+    def handler(request):
+        if request.method == "POST":
+            body.update(json.loads(request.content))
+        remote = remote_order(description=body.get("description"), type=body.get("type"))
+        remote.pop("branch")
+        return __import__("httpx").Response(200, json={"result": remote})
+
+    connect(svc, handler)
+    placed = svc.checkout(svc.new_session(), [line(quantity=2)], "takeaway", checkout_id="old")
+    assert "THẺ SỐ 1 · Mang đi" in order_description(placed)
+    old = order_description(placed).replace("THẺ SỐ", "THẺ RUNG SỐ")
+    assert "THẺ RUNG SỐ 1 · Mang đi" in old
+    echo = remote_order(description=old, type="take-out")
+    echo.pop("branch")
+    MerchantClient.validate(svc.merchant, echo, placed)  # does not raise
+    echo["description"] = old + " altered"
+    import pytest
+
+    with pytest.raises(Exception, match="merchant_order_mismatch"):
+        MerchantClient.validate(svc.merchant, echo, placed)

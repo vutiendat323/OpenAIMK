@@ -4,7 +4,7 @@ import re
 
 from trendcoffee.codex_voice import INSTRUCTIONS, VOICE_INSTRUCTIONS
 
-QR_LINE = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số 7."
+QR_LINE = "Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số 7."
 PAID_LINE = "Đơn đã được thanh toán."
 
 

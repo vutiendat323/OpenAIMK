@@ -28,8 +28,10 @@ AI_ORDER_NOTICE = (
 CARD_NOTICE = "Khi thẻ rung, mời quý khách đến quầy nhận món. Cảm ơn quý khách!"
 
 
-def card_notice(order):
-    card = "THẺ RUNG SỐ " + str(order["vibrating_card"])
+def card_notice(order, *, old_wording=False):
+    """`old_wording`: orders created before 2026-11-06 21:30 said "THẺ RUNG SỐ N" (the user
+    then shortened the noun to "thẻ"); they keep that description on the merchant."""
+    card = ("THẺ RUNG SỐ " if old_wording else "THẺ SỐ ") + str(order["vibrating_card"])
     if order.get("fulfillment") == "takeaway":
         card += " · Mang đi"
     elif order.get("table_label"):
@@ -37,12 +39,12 @@ def card_notice(order):
     return "AI ORDER\n" + card + "\n" + CARD_NOTICE
 
 
-def order_description(order, *, legacy=False):
+def order_description(order, *, legacy=False, old_wording=False):
     """The kiosk's merchant description; `legacy` is the form used before the notice."""
     if legacy:
         notice = ""
     elif order.get("vibrating_card"):
-        notice = card_notice(order) + "\n"
+        notice = card_notice(order, old_wording=old_wording) + "\n"
     else:
         notice = AI_ORDER_NOTICE + "\n"
     text = notice + "Kiosk " + order["id"]
@@ -281,7 +283,11 @@ class MerchantClient:
         if "branch" not in remote:
             # Guest order responses omit branch; bind them to our echoed creation request.
             # Orders placed before the AI ORDER notice still carry the legacy form.
-            expected = (order_description(order), order_description(order, legacy=True))
+            expected = (
+                order_description(order),
+                order_description(order, legacy=True),
+                order_description(order, old_wording=True),
+            )
             branch_matches = remote.get("description") in expected and remote.get("type") == (
                 "take-out" if order["fulfillment"] == "takeaway" else "at-table"
             )

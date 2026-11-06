@@ -83,7 +83,7 @@ class ClaimGuard:
 # Sent to the realtime voice layer as a developer note when a result is stopped.
 # A pickup card Trend names must be the order's own (anti-goal, 2026-11-06): the guest
 # takes and waits for that card.
-SPOKEN_CARD = re.compile(r"thẻ rung\D{0,30}?số\s*(\d+)", re.IGNORECASE)
+SPOKEN_CARD = re.compile(r"thẻ(?: rung)?\D{0,30}?số\s*(\d+)", re.IGNORECASE)
 
 
 def wrong_card(text, card):

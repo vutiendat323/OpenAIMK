@@ -18,7 +18,7 @@ def qr_sentence(card):
     Orders created before pickup cards keep the original sentence."""
     if not card:
         return QR_SENTENCE
-    return f"Bạn quét QR trên màn hình để thanh toán nhé, thẻ rung của bạn là số {card}."
+    return f"Bạn quét QR trên màn hình để thanh toán nhé, thẻ của bạn là số {card}."
 
 
 _NO_CHANGE = (

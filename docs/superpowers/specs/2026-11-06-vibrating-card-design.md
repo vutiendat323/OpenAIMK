@@ -1,6 +1,6 @@
 # Vibrating pickup cards for dine-in orders — design
 
-Date: 2026-11-06. Status: approved 2026-11-06. **Amended after implementation:** the user dropped the printed card header (decision 5a below is withdrawn; the printer keeps its previous header). The card is in the merchant order description, on the kiosk and in Trend's QR sentence.
+Date: 2026-11-06. Status: approved 2026-11-06. **Wording amended 2026-11-06 (user):** the noun "thẻ rung" is now just "thẻ" everywhere the guest or staff read it (QR sentence "… thẻ của bạn là số N.", merchant description line "THẺ SỐ N · …", kiosk label "Thẻ số"); "Khi thẻ rung, mời quý khách đến quầy nhận món" keeps the verb "rung" (the card vibrates). Orders already created keep "THẺ RUNG SỐ N" on the merchant and still validate. **Amended after implementation:** the user dropped the printed card header (decision 5a below is withdrawn; the printer keeps its previous header). The card is in the merchant order description, on the kiosk and in Trend's QR sentence.
 
 ## Intent
 
