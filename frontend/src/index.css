@@ -6436,6 +6436,10 @@ p {
   height: 32px;
   min-height: 32px;
   overflow: hidden;
+  /* The status dot's pulse spreads 8px; the clip edge must lie beyond it, so the box grows
+     8px each side and the negative margin keeps the dot where it was. */
+  padding-inline: 8px;
+  margin-inline: -8px;
 }
 .simple-kiosk:not(.assistant-idle) .assistant-conversation:empty {
   display: none;
