@@ -42,7 +42,6 @@ export const timingGroups: {
         label: 'Hỏi khi im lặng',
         unit: 's',
         step: 5,
-        hint: 'Trend hỏi một câu khi khách im lặng quá lâu.',
       },
     ],
   },

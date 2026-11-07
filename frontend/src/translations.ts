@@ -7,8 +7,6 @@ const english: Record<string, string> = {
   'Kết thúc sau khi rời đi': 'End after leaving',
   'Nhắc khách': 'Prompting the guest',
   'Hỏi khi im lặng': 'Ask when quiet',
-  'Trend hỏi một câu khi khách im lặng quá lâu.':
-    'Trend asks a question when the guest is quiet too long.',
   'Thời lượng tối đa': 'Max length',
   'Cảnh báo trước': 'Warn before end',
   'Phải nhỏ hơn thời lượng tối đa.': 'Must be less than the max length.',
