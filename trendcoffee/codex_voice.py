@@ -543,6 +543,11 @@ class CodexVoice:
                     "web_search": "disabled",
                     "features.skip_host_skill_discovery": True,
                     "model_reasoning_effort": "medium",
+                    # Codex would otherwise load the repo's coding AGENTS.md and the
+                    # host's whole skill list (~26k chars, measured 2026-11-07) into
+                    # every guest turn; neither is for serving guests.
+                    "project_doc_max_bytes": 0,
+                    "skills.include_instructions": False,
                 },
             },
         )
