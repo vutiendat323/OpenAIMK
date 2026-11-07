@@ -338,6 +338,8 @@ LINES = {
         "additionalProperties": False,
     },
 }
+PRICE = {"type": "integer", "minimum": 0, "maximum": 10000000}
+MENU_FILTERS = ("category", "min_price_vnd", "max_price_vnd", "sort")
 TOOLS = [
     _tool(
         "kiosk_tables",
@@ -346,11 +348,15 @@ TOOLS = [
     ),
     _tool(
         "kiosk_menu",
-        "Read the whole current menu with no arguments. For preferences/recommendations, reason over the whole catalog and show your chosen real item_ids; query may label the customer's request. Text queries are only a convenience for named drinks, never evidence that no suitable drink exists. This tool displays choices; it does not order them.",
+        "Read the whole current menu with no arguments. For preferences/recommendations, reason over the whole catalog and show your chosen real item_ids; query may label the customer's request. For a category or price question call it ONCE with category and/or min_price_vnd/max_price_vnd (integer VND: '40k'/'bốn mươi nghìn' = 40000) and sort=price_asc for cheapest or price_desc for most expensive: it returns and shows EVERY matching item. Text queries are only a convenience for named drinks, never evidence that no suitable drink exists. This tool displays choices; it does not order them.",
         {
             "query": TEXT,
             "queries": {"type": "array", "items": TEXT, "minItems": 1, "maxItems": 20},
             "item_ids": {"type": "array", "items": TEXT, "minItems": 1, "maxItems": 20},
+            "category": {"type": "string", "maxLength": 100},
+            "min_price_vnd": PRICE,
+            "max_price_vnd": PRICE,
+            "sort": {"enum": ["price_asc", "price_desc"]},
         },
     ),
     _tool(
@@ -1467,7 +1473,10 @@ class InteractionHost:
         if name == "kiosk_menu":
             query = str(args.get("query", ""))[:500]
             result = self.service.menu_search(
-                query, args.get("queries"), item_ids=args.get("item_ids")
+                query,
+                args.get("queries"),
+                item_ids=args.get("item_ids"),
+                **{key: args[key] for key in MENU_FILTERS if key in args},
             )
             ids = [i["id"] for i in result["items"]]
             await self.emit(

@@ -205,3 +205,42 @@ def match_menu(items, terms):
 def _normalize_separators(value):
     # Normalize each list member separately so punctuation still separates drinks.
     return re.sub(r"[^,;+&\n]+", lambda match: _normalize(match[0]), value)
+
+
+# Words guests wrap around a category name ("các món trà", "đồ uống cà phê") and the
+# English names guests use; both map onto the published category names.
+_CATEGORY_FILLER = {"mon", "cac", "nhung", "loai", "do", "uong", "nuoc"}
+_CATEGORY_ALIASES = {
+    "tea": "tra",
+    "coffee": "ca phe",
+    "cake": "banh",
+    "cakes": "banh",
+    "pastry": "banh",
+    "bakery": "banh",
+    "smoothie": "sinh to",
+    "smoothies": "sinh to",
+}
+SORTS = ("price_asc", "price_desc")
+
+
+def _category_key(value):
+    words = [word for word in _normalize(value).split() if word not in _CATEGORY_FILLER]
+    key = " ".join(words)
+    return _CATEGORY_ALIASES.get(key, key)
+
+
+def resolve_category(name, categories):
+    """The published category a guest's wording names, or None. Accent and case free."""
+    for category in categories:
+        if name.strip() == category.get("id"):
+            return category
+    key = _category_key(name)
+    if not key:
+        return None
+    return next((c for c in categories if _category_key(c.get("name", "")) == key), None)
+
+
+def in_category(item, category):
+    if item.get("category_id") and category.get("id"):
+        return item["category_id"] == category["id"]
+    return _category_key(item.get("category", "")) == _category_key(category.get("name", ""))

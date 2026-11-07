@@ -40,16 +40,33 @@ def create_server(service):
 
     @mcp.tool()
     def get_menu(
-        query: str = "", queries: list[str] | None = None, item_ids: list[str] | None = None
+        query: str = "",
+        queries: list[str] | None = None,
+        item_ids: list[str] | None = None,
+        category: str | None = None,
+        min_price_vnd: int | None = None,
+        max_price_vnd: int | None = None,
+        sort: str | None = None,
     ) -> dict[str, Any]:
         """Read the full menu with no arguments; reason over it for broad preferences.
+        Category/price questions: ONE call with category ('trà', 'cà phê', 'bánh', 'sinh tố')
+        and/or min_price_vnd/max_price_vnd (integer VND) and sort='price_asc'|'price_desc';
+        it returns every matching item. unknown_category lists the real categories.
         Return chosen real item_ids to display/verify recommendations without keyword matching.
         For named drinks, optionally pass queries=['cà phê muối','cà phê sữa','trà bắc'].
         Each drink is independent; inspect resolved_item_ids, suggestions and requires_clarification.
         Use clear corrections; ask briefly about uncertain suggestions instead of rejecting misheard names.
         Use returned exact IDs as separate lines in ONE draft_order. Check stale/live_stock.
         """
-        return service.menu_search(query[:500], queries, item_ids=item_ids)
+        return service.menu_search(
+            query[:500],
+            queries,
+            item_ids=item_ids,
+            category=category,
+            min_price_vnd=min_price_vnd,
+            max_price_vnd=max_price_vnd,
+            sort=sort,
+        )
 
     @mcp.tool()
     def get_tables(table_label: str | None = None) -> dict[str, Any]:

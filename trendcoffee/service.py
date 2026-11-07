@@ -12,7 +12,7 @@ import unicodedata
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from .menu_matching import match_menu
+from .menu_matching import SORTS, in_category, match_menu, resolve_category
 from .store import Store
 
 
@@ -20,6 +20,27 @@ class ServiceError(Exception):
     def __init__(self, code, status=400):
         super().__init__(code)
         self.code, self.status = code, status
+
+
+def _menu_filters(category, min_price_vnd, max_price_vnd, sort):
+    """Validated menu filters that were given; an empty dict when there are none."""
+    filters = {}
+    if category is not None:
+        if not isinstance(category, str) or not 0 < len(category.strip()) <= 100:
+            raise ServiceError("invalid_menu_filter")
+        filters["category"] = category.strip()
+    for name, value in (("min_price_vnd", min_price_vnd), ("max_price_vnd", max_price_vnd)):
+        if value is not None:
+            if type(value) is not int or not 0 <= value <= 10000000:
+                raise ServiceError("invalid_menu_filter")
+            filters[name] = value
+    if filters.get("min_price_vnd", 0) > filters.get("max_price_vnd", 10000000):
+        raise ServiceError("invalid_menu_filter")
+    if sort is not None:
+        if sort not in SORTS:
+            raise ServiceError("invalid_menu_filter")
+        filters["sort"] = sort
+    return filters
 
 
 def normalize(value):
@@ -223,7 +244,17 @@ class Service:
             raise ServiceError("no_available_tables", 409)
         return result["first_available"]["name"]
 
-    def menu_search(self, query="", queries=None, *, item_ids=None):
+    def menu_search(
+        self,
+        query="",
+        queries=None,
+        *,
+        item_ids=None,
+        category=None,
+        min_price_vnd=None,
+        max_price_vnd=None,
+        sort=None,
+    ):
         with self.store.connect() as db:
             db.execute("BEGIN")  # Read products and category metadata from one snapshot.
             items = [json.loads(row[0]) for row in db.execute("SELECT data FROM menu ORDER BY id")]
@@ -242,6 +273,9 @@ class Service:
             categories = list(groups.values())
         for item in items:
             item["stale"] = time.time() - timestamp(item["verified_at"]) > self.catalog_max_age
+        filters = _menu_filters(category, min_price_vnd, max_price_vnd, sort)
+        if item_ids is not None and filters:
+            raise ServiceError("invalid_menu_selection")
         if item_ids is not None:
             if (
                 not isinstance(item_ids, list)
@@ -258,18 +292,38 @@ class Service:
                 "items": [by_id[ident] for ident in dict.fromkeys(item_ids)],
                 "selection": "agent",
             }
+        if filters.get("category") is not None:
+            found = resolve_category(filters["category"], categories)
+            if found is None:
+                # Name the real categories so the next call can use one of them.
+                return {
+                    **match_menu([], []),
+                    "categories": categories,
+                    "filters": filters,
+                    "unknown_category": filters["category"],
+                }
+            filters["category"] = found["name"]
+            items = [item for item in items if in_category(item, found)]
+        if filters.get("min_price_vnd") is not None:
+            items = [item for item in items if item["price_vnd"] >= filters["min_price_vnd"]]
+        if filters.get("max_price_vnd") is not None:
+            items = [item for item in items if item["price_vnd"] <= filters["max_price_vnd"]]
         terms = ([query] if query.strip() else []) + (queries or [])
-        if not terms:
-            return {**match_menu(items, []), "categories": categories}
         if len(terms) > 20 or any(not isinstance(q, str) or len(q) > 500 for q in terms):
             raise ServiceError("invalid_menu_queries")
-
         result = match_menu(items, terms)
         result["categories"] = categories
-        if result["requires_clarification"]:
+        if terms and result["requires_clarification"]:
             # An unmatched phrase can be a preference rather than a product name.
             # Let the model inspect the full source instead of inferring absence.
             result.update(catalog=items, requires_catalog_review=True)
+        if filters:
+            if filters.get("sort"):
+                descending = filters["sort"] == "price_desc"
+                result["items"].sort(
+                    key=lambda item: -item["price_vnd"] if descending else item["price_vnd"]
+                )
+            result["filters"] = filters
         return result
 
     def remember(self, token, key, value, consent=False):
