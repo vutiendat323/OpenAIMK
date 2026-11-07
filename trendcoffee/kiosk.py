@@ -27,6 +27,8 @@ from .claim_guard import (
     paid_turn,
     promises,
     recovery_turn,
+    relay_turn,
+    said,
     says_paid,
     spoken_items,
     takeover_note,
@@ -309,6 +311,9 @@ WARNING_POLL = 0.1
 # start up to PROMISE_ALLOWANCE before the guest's transcript arrives.
 PROMISE_WAIT = 3.0
 PROMISE_ALLOWANCE = 3.0
+# Codex's answer not yet said this long after it arrived (and after Trend stops speaking) is
+# asked for again (2026-11-07). Answers that were relayed were spoken within 4.3-6.2 s.
+RELAY_WAIT = 5.0
 
 
 def screen_order(menu, ids):
@@ -435,6 +440,7 @@ class InteractionHost:
         self.speaker = None
         self.discard_logged = False  # one log per reply when its audio is not played
         self.promise_wait = PROMISE_WAIT
+        self.relay_wait = RELAY_WAIT
         self.playback_lock = asyncio.Lock()
         self.playback_tasks = set()
         self._speaker_stop = None
@@ -890,6 +896,8 @@ class InteractionHost:
         codex_turn_at = [None]  # when Codex last took up work on this thread
         history = deque(maxlen=6)  # (role, text) of recent finished turns, for a recovery turn
         recovered = set()  # guest requests the kiosk already ran itself
+        unheard = [None]  # (text, at) of Codex's latest answer Trend has not said yet
+        relayed = set()  # guest requests whose unheard answer was already asked for again
 
         async def stop_unbacked_result(note=UNBACKED_RESULT_NOTE, *, payment=False):
             reply_stopped[0] = True
@@ -989,6 +997,39 @@ class InteractionHost:
                     thread, "developer", takeover_note(request, promise=True)
                 )
 
+        async def relay_unheard(answer):
+            """Codex answered but Trend never said it: Codex hands the same answer over again."""
+            await asyncio.sleep(self.relay_wait)
+            waited = 0.0
+            while (
+                self.playing or any(role == "assistant" for role, _ in transcript_buffers)
+            ) and waited < WARNING_WAIT:
+                await asyncio.sleep(WARNING_POLL)  # Trend may be saying it right now
+                waited += WARNING_POLL
+            request = guard.request_at
+            if (
+                unheard[0] is not answer
+                or not self.active
+                or generation != self.generation
+                or self.voice_connection is not connection
+                or request in relayed
+                or not hasattr(self.codex, "start_turn")
+            ):
+                return
+            relayed.add(request)
+            unheard[0] = None
+            self.audio_metrics["unspoken_answers"] = (
+                self.audio_metrics.get("unspoken_answers", 0) + 1
+            )
+            logging.getLogger(__name__).warning(
+                "Codex answered at %s but Trend did not say it; asking for the answer again",
+                time.strftime("%H:%M:%S", time.localtime(time.time() - self.clock() + answer[1])),
+            )
+            try:
+                await self.codex.start_turn(self.thread_id, relay_turn(answer[0]))
+            except Exception:
+                logging.getLogger(__name__).exception("Kiosk relay turn failed")
+
         def show_spoken_items(text):
             """Drinks Trend names without a kiosk tool behind them still reach the screen."""
             ids = spoken_items(text, self.service.menu())
@@ -1083,6 +1124,20 @@ class InteractionHost:
             if method == "turn/started":
                 codex_turn_at[0] = self.clock()
                 return
+            if method == "item/completed":
+                item = params.get("item") or {}
+                text = str(item.get("text") or "").strip()[:1000]
+                if (
+                    item.get("type") == "agentMessage"
+                    and item.get("phase") in (None, "final_answer")
+                    and text
+                    and self.greeted
+                ):
+                    unheard[0] = answer = (text, self.clock())
+                    task = asyncio.create_task(relay_unheard(answer))
+                    self.cleanup_tasks.add(task)
+                    task.add_done_callback(self.cleanup_tasks.discard)
+                return
             if (
                 method
                 in ("thread/realtime/userTurn/started", "thread/realtime/assistantTurn/started")
@@ -1152,6 +1207,9 @@ class InteractionHost:
                 if role == "user":
                     self.activity_at = self.guest_activity_at = self.clock()
                     guard.guest(text, self.clock())
+                    unheard[0] = None  # the guest moved on; Codex answers the new turn
+                elif role == "assistant" and unheard[0] and said(unheard[0][0], text):
+                    unheard[0] = None
                 elif (
                     role == "assistant"
                     and turn_id

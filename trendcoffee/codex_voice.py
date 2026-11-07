@@ -18,6 +18,8 @@ FORWARDED_EVENTS = (
     "thread/realtime/closed",
     "thread/realtime/outputAudio/delta",
     "turn/started",
+    # Codex's own answers, so the kiosk can tell when the voice never said one (2026-11-07).
+    "item/completed",
 )
 
 INSTRUCTIONS = """You serve Trend Coffee customers through the provided kiosk tools only.
