@@ -101,7 +101,7 @@ export function KioskTimingSettings() {
                   {t(label)}
                   {hint && <small className="kiosk-timing-hint">{t(hint)}</small>}
                   <small>
-                    {limit.min}–{limit.max} {unit} · {t('mặc định')} {info.defaults[name]} {unit}
+                    {limit.min}–{limit.max} {unit}
                   </small>
                   {error && (
                     <small className="kiosk-timing-error" role="alert">
@@ -138,16 +138,23 @@ export function KioskTimingSettings() {
         <span className="kiosk-timing-input kiosk-timing-code">
           <input
             id="kiosk-timing-staff"
-            type="password"
+            // A text field masked by CSS: a real password field makes the browser offer saved
+            // logins over the on-screen keyboard.
+            type="text"
+            name="kiosk-staff-code"
             autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
             value={staffCode}
             onChange={(event) => setStaffCode(event.target.value)}
           />
         </span>
       </div>
-      <p className="settings-hint">
-        {t('Thay đổi áp dụng từ khách tiếp theo; khách đang trò chuyện giữ thiết lập cũ.')}
-      </p>
+      <p className="settings-hint">{t('Áp dụng từ khách tiếp theo.')}</p>
       {status && (
         <p
           className={'settings-hint' + (status.kind === 'error' ? ' kiosk-timing-error' : '')}

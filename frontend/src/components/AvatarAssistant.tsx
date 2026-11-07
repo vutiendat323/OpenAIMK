@@ -39,7 +39,16 @@ function AudioWave({ read, active }: { read: () => number[]; active: boolean }) 
   )
 }
 
-export function AvatarAssistant({ voice, token }: { voice: Voice; token: string }) {
+export function AvatarAssistant({
+  voice,
+  token,
+  controlsVisible = true,
+}: {
+  voice: Voice
+  token: string
+  // Staff hide the microphone buttons together with Settings (Ctrl+Alt+S).
+  controlsVisible?: boolean
+}) {
   const { t, character } = usePreferences()
   const phase = assistantPhase(voice)
   const conversation = useRef<HTMLDivElement>(null)
@@ -140,31 +149,33 @@ export function AvatarAssistant({ voice, token }: { voice: Voice; token: string 
           read={voice.audioLevels}
           active={phase === 'listening' || phase === 'speaking'}
         />
-        <div className="assistant-controls">
-          {!voice.armed ? (
-            <Button
-              className="assistant-start"
-              disabled={voice.busy || !token || !voice.voiceOptionsReady}
-              onClick={() => void voice.arm(token)}
-            >
-              <Mic size={18} />
-              {t(voice.busy ? 'Đang kết nối…' : 'Bật micro')}
-            </Button>
-          ) : (
-            <div className="assistant-controls-row">
-              <Button className="assistant-disarm" onClick={voice.disarm}>
-                <MicOff size={16} />
-                {t('Tắt micro')}
+        {controlsVisible && (
+          <div className="assistant-controls">
+            {!voice.armed ? (
+              <Button
+                className="assistant-start"
+                disabled={voice.busy || !token || !voice.voiceOptionsReady}
+                onClick={() => void voice.arm(token)}
+              >
+                <Mic size={18} />
+                {t(voice.busy ? 'Đang kết nối…' : 'Bật micro')}
               </Button>
-              {!voice.active && (
-                <Button className="assistant-start" onClick={() => voice.begin()}>
-                  <Mic size={16} />
-                  {t('Bắt đầu nói')}
+            ) : (
+              <div className="assistant-controls-row">
+                <Button className="assistant-disarm" onClick={voice.disarm}>
+                  <MicOff size={16} />
+                  {t('Tắt micro')}
                 </Button>
-              )}
-            </div>
-          )}
-        </div>
+                {!voice.active && (
+                  <Button className="assistant-start" onClick={() => voice.begin()}>
+                    <Mic size={16} />
+                    {t('Bắt đầu nói')}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </section>
     </aside>
   )

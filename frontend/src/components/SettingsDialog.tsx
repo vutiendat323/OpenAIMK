@@ -118,6 +118,11 @@ export function SettingsDialog({ voice }: { voice: ReturnType<typeof useKioskVoi
         className="settings-dialog"
         overlayClassName="settings-overlay"
         showCloseButton={false}
+        // The on-screen keyboard lives outside the dialog; touching it must not close it.
+        onInteractOutside={(event) => {
+          const target = event.target as Element | null
+          if (target?.closest?.('.kiosk-keyboard-wrapper')) event.preventDefault()
+        }}
       >
         <header className="settings-header">
           <DialogTitle>{t('Cài đặt')}</DialogTitle>
@@ -245,6 +250,7 @@ export function SettingsDialog({ voice }: { voice: ReturnType<typeof useKioskVoi
                         .map((action) => (
                           <Button
                             key={action}
+                            className="settings-pill-button"
                             variant="outline"
                             size="sm"
                             onClick={() => voice.avatarAction(action)}

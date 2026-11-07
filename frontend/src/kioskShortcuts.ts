@@ -1,6 +1,7 @@
 // Staff keyboard shortcuts on the kiosk: Ctrl+Alt+S hides or shows the header Settings
-// button, Ctrl+Alt+K turns the on-screen keyboard off or on (useful with a physical
-// keyboard). Each choice is kept per browser; storage may be unavailable.
+// button and the assistant's microphone buttons; Ctrl+Alt+K turns the on-screen keyboard
+// off or on (useful with a physical keyboard). Each choice is kept per browser; storage
+// may be unavailable.
 
 export const kioskShortcuts = {
   settings: { code: 'KeyS', label: 'Ctrl+Alt+S', storageKey: 'trendcoffee.settingsButton' },

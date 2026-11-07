@@ -606,7 +606,9 @@ export default function App() {
         </header>
       )}
       <div className="kiosk-layout">
-        {voice.enabled && <AvatarAssistant voice={voice} token={token} />}
+        {voice.enabled && (
+          <AvatarAssistant voice={voice} token={token} controlsVisible={settingsVisible} />
+        )}
         <div
           className="menu-workspace"
           hidden={assistantIdle}

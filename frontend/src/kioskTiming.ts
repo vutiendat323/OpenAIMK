@@ -22,16 +22,16 @@ export const timingGroups: {
   {
     title: 'Bắt đầu phiên',
     fields: [
-      { name: 'presence_distance_m', label: 'Khoảng cách kích hoạt', unit: 'm', step: 0.05 },
+      { name: 'presence_distance_m', label: 'Khoảng cách', unit: 'm', step: 0.05 },
       { name: 'enter_seconds', label: 'Đứng trước camera', unit: 's', step: 0.5 },
     ],
   },
   {
     title: 'Kết thúc phiên',
     fields: [
-      { name: 'leave_seconds', label: 'Rời đi bao lâu thì kết thúc', unit: 's', step: 1 },
+      { name: 'leave_seconds', label: 'Kết thúc sau khi rời đi', unit: 's', step: 1 },
       { name: 'session_limit_seconds', label: 'Thời lượng tối đa', unit: 's', step: 30 },
-      { name: 'warning_seconds', label: 'Cảnh báo trước khi hết giờ', unit: 's', step: 5 },
+      { name: 'warning_seconds', label: 'Cảnh báo trước', unit: 's', step: 5 },
     ],
   },
   {
@@ -39,10 +39,10 @@ export const timingGroups: {
     fields: [
       {
         name: 'idle_seconds',
-        label: 'Hỏi khách sau khi im lặng',
+        label: 'Hỏi khi im lặng',
         unit: 's',
         step: 5,
-        hint: 'Khách không nói, không chạm, không đổi giỏ trong khoảng này thì Trend hỏi một câu hợp với lúc đó (chọn món, thanh toán, thêm món). Phiên không kết thúc.',
+        hint: 'Trend hỏi một câu khi khách im lặng quá lâu.',
       },
     ],
   },
