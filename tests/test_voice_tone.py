@@ -74,3 +74,14 @@ def test_the_voice_layer_states_results_only_by_relaying_codex():
     assert "If you have not delegated the latest request, delegate it now" in flat
     assert "never repeat an earlier result as if it were new" in flat.lower()
     assert QR_LINE in VOICE_INSTRUCTIONS and "the paid result below" in flat
+
+
+def test_the_voice_delegates_before_it_acknowledges():
+    """2026-11-07 audio probe (same 10 real orders): "FIRST speak an acknowledgement, then
+    delegate" delegated 2/10 and the voice stated 4 results with no tool; "FIRST delegate,
+    then acknowledge" delegated 9/10 with none. A spoken acknowledgement often ended the turn.
+    Example acknowledgements that read like a confirmed order were copied as the reply."""
+    flat = " ".join(VOICE_INSTRUCTIONS.split())
+    assert "FIRST delegate their complete request to Codex, then say one brief" in flat
+    assert "FIRST speak one brief" not in flat
+    assert "'Dạ, một trà vải đào mang đi nhé!'" not in flat
