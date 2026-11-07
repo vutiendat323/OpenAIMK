@@ -185,9 +185,10 @@ def takeover_note(request, *, promise=False):
 
 # A promise to act ("mình ghi liền cho bạn") is not a result, but if no Codex turn follows,
 # the guest waits for nothing (2026-11-06: 16:07, 20:38, 20:44; the guest had to repeat).
+# "xem" added 2026-11-07 09:11: "mình xem ngay nhé" and no delegation; nothing was run.
 PROMISE = re.compile(
-    r"(làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra)\s*(ngay|liền)"
-    r"|để mình (làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra)"
+    r"(làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra|xem)\s*(ngay|liền)"
+    r"|để mình (làm|gửi|ghi|đặt|tạo|lên đơn|xử lý|kiểm tra|xem)"
     r"|đang chờ hệ thống",
     re.IGNORECASE,
 )
@@ -196,6 +197,30 @@ PROMISE = re.compile(
 def promises(text):
     """True when Trend says it is about to act on a request (an acknowledgement, not a result)."""
     return bool(PROMISE.search(str(text)))
+
+
+# Codex's answer reaches the guest only if the voice says it. On 2026-11-07 (08:32, 09:09,
+# 09:10) Codex asked "tại quán hay mang đi?" or reported an item missing from the menu,
+# and the guest heard only the voice's acknowledgement ("mình làm ngay cho bạn đây").
+SAID_SHARE = 0.5  # real relays shared 0.6-1.0 of the answer's words; lost ones 0.2
+
+
+def _words(text):
+    return set(re.findall(r"\w+", unicodedata.normalize("NFC", str(text)).lower()))
+
+
+def said(answer, spoken):
+    """True when a sentence Trend spoke carries Codex's answer (paraphrase allowed)."""
+    wanted = _words(answer)
+    return not wanted or len(wanted & _words(spoken)) / len(wanted) >= SAID_SHARE
+
+
+def relay_turn(answer):
+    """The Codex turn that hands an unheard answer to the voice again, unchanged."""
+    return (
+        "The guest did not hear your last reply: the voice never said it. Reply to the guest "
+        f"again with exactly this text, and call no tool:\n{answer}"
+    )
 
 
 def recovery_turn(request, history, *, payment=False):
