@@ -106,6 +106,29 @@ def test_guest_thread_uses_luna_medium_without_fast_or_model_fallback():
     asyncio.run(run())
 
 
+def test_guest_thread_leaves_out_coding_context_codex_would_load():
+    """The repo's AGENTS.md and the host's skill list (~26k chars) are not for guests."""
+
+    async def run():
+        native = CodexVoice(".")
+        requests = []
+
+        async def start():
+            pass
+
+        async def request(method, params):
+            requests.append((method, params))
+            return {"thread": {"id": "guest-thread"}}
+
+        native.start, native.request = start, request
+        await native.create_thread([], None, None)
+        config = requests[0][1]["config"]
+        assert config["project_doc_max_bytes"] == 0
+        assert config["skills.include_instructions"] is False
+
+    asyncio.run(run())
+
+
 def test_native_process_exit_notifies_guest_to_stop_voice():
     async def run():
         events = []
